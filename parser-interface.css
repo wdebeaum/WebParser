@@ -1,0 +1,82 @@
+h2 { font-size: large }
+
+select { margin-right: 2em }
+
+table.tags {
+  border-collapse: collapse;
+  margin-bottom: 1em;
+}
+
+table.tags tr {
+  vertical-align: top;
+}
+
+table.tags tr th, table.tags tr td {
+  border: 1px solid black;
+  padding-left: 3pt;
+  padding-right: 3pt;
+  text-align: left;
+}
+
+dl {
+  margin-top: inherit;
+  margin-bottom: inherit;
+}
+
+dt, dd { clear: both }
+
+dt.short, dt.short + dd {
+  display: block;
+  float: left;
+  padding: 0;
+  margin: 0;
+}
+
+dt.short { clear: left; }
+
+dt.short:after { content: ":"; }
+
+dt.short + dd {
+  clear: right;
+  margin-left: 1em;
+}
+
+td.LinGONode {
+  border-top: solid;
+  border-right: solid;
+  border-left: solid;
+  border-width: thin;
+  margin-right: 1px;
+  margin-left: 1px;
+  text-align: center;
+}
+
+td.LinGOLeaf {
+  border-right: solid;
+  border-left: solid;
+  border-width: thin;
+  margin-right: 2px;
+  margin-left: 2px;
+  text-align: center;
+  font-style: italic;
+}
+
+.checkboxes {
+  list-style: none;
+  margin: 0;
+}
+
+.term0 { background-color: #00BBFF }
+.term1 { background-color: #00FF00 }
+.term2 { background-color: #FF0000 }
+.term3 { background-color: #CB00CE }
+.term4 { background-color: #2BDD00 }
+.term5 { background-color: #0092CC }
+.term6 { background-color: #95CC00 }
+.term7 { background-color: #FFAA00 }
+.term8 { background-color: #8700FF }
+.term9 { background-color: #A5700D }
+.term10 { background-color: #BB7474 }
+.term11 { background-color: #75C440 }
+.term12 { background-color: #6A8DB7 }
+

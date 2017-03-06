@@ -1,0 +1,19 @@
+#!/usr/bin/perl
+
+use CGI;
+my $q = CGI->new;
+print $q->header(-type => 'image/svg+xml', -charset => 'UTF-8');
+
+eval {
+  my $dot = $q->param('dot');
+  die "Missing 'dot' parameter" unless (defined($dot));
+  %ENV = ( # sanitize environment and set dot paths
+    PATH => 'DOT_BIN_DIR:/bin:/usr/bin:/usr/local/bin',
+    LD_LIBRARY_PATH => 'DOT_LIB_DIR'
+  );
+  open DOT2SVG, "DOT_TO_SVG_CMD |grep '^<svg' -A100000 |perl -p0777 -e 's/font-weight:regular/font-weight:normal/g; s{(<g [^>]*?class=\"node\">\\s*<title>[^<]*</title>\\s*<text text-anchor=[^\\s>]+ x=[^\\s>]+ y=[^\\s>]+)( [^>]+>[^<]+)</text>\\s*<text text-anchor=[^\\s>]+ x=[^\\s>]+ y=[^\\s>]+( [^>]+>[^<]+)</text>\\s*<text text-anchor=[^\\s>]+ x=[^\\s>]+ y=[^\\s>]+( [^>]+>[^<]+)</text>(\\s*</g>)}{\$1><tspan\$2</tspan><tspan\$3</tspan><tspan\$4</tspan></text>\$5}g;'" or die "Can't run dot: $!\n";
+  print DOT2SVG $dot;
+  close DOT2SVG;
+  1;
+} || print "<svg><text>$@</text></svg>\n";
+

@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="cvsId" content="$Id: api.html,v 1.21 2017/01/13 21:40:35 wdebeaum Exp $">
+<meta charset="UTF-8">
+<title>TRIPS Parser Web API Documentation</title>
+<style type="text/css">
+table {
+  border-collapse: collapse;
+}
+tr {
+  vertical-align: top;
+}
+th, td {
+  border: 1px solid black;
+  text-align: left;
+}
+
+tr.first th, tr.first td {
+  border-top: 0.75ex solid black;
+}
+
+td.spacer {
+  border-left: none;
+}
+
+tr.first th {
+  border-right: none;
+}
+</style>
+</head>
+<body>
+
+<h1>TRIPS Parser Web API Documentation</h1>
+
+<h2>Quick Start</h2>
+<p>This URL:</p>
+<blockquote><a href="http://trips.ihmc.us/parser/cgi/parse?input=this+is+an+example"><code>http://trips.ihmc.us/parser/cgi/parse?input=this+is+an+example</code></a></blockquote>
+<p>Will cause the TRIPS Parser to parse the string "this is an example" with its default options. It will send back an XML document with lots of different information (see "Output Format" below). Which parts of the output you use may depend on your application.</p>
+<p>There are different instances of the TRIPS parser with different default settings. The one above, <code>parse</code>, is a generic one. As of this writing we also have <code>cabot</code> for blocks world, <code>drum</code> for Deep Reading for Understanding [biomolecular] Mechanisms, and <code>step</code> for the generic paragraph parser from the STEP 2008 shared task. <code>cabot</code> has the same browser interface as <code>parse</code>, but <code>drum</code> and <code>step</code> are slightly different in that they are meant to take a paragraph as input instead of a single sentence, so they have a multiline <code>&lt;textarea&gt;</code> instead of a single-line <code>&lt;input type="text"&gt;</code>. <code>drum</code> also omits the TextTagger options for simplicity.</p>
+<p>For example, this URL:</p>
+<blockquote><a href="http://trips.ihmc.us/parser/cgi/drum?input=The+oncogenes+are+KRAS%2C+PIK3CA%2C+and+BRAF."><code>http://trips.ihmc.us/parser/cgi/drum?input=The+oncogenes+are+KRAS%2C+PIK3CA%2C+and+BRAF.</code></a></blockquote>
+<p>will parse the string "The oncogenes are KRAS, PIK3CA, and BRAF." using settings from the DRUM system.</p>
+<p>For longer inputs, you should use the POST request method instead of GET, so that the URL doesn't get too long.</p>
+
+<h2>URL</h2>
+<p>The URL for the web API is the same as for the website: <a href="http://trips.ihmc.us/parser/cgi/parse"><code>http://trips.ihmc.us/parser/cgi/parse</code></a> (change the word after the last slash for parsers from other TRIPS systems: <a href="http://trips.ihmc.us/parser/cgi/cabot"><code>cabot</code></a>, <a href="http://trips.ihmc.us/parser/cgi/drum"><code>drum</code></a>, and <a href="http://trips.ihmc.us/parser/cgi/step"><code>step</code></a>). You can use either the <code>GET</code> or the <code>POST</code> HTTP request methods, either will work. The form displayed on the <code>parse</code> and <code>cabot</code> websites use <code>GET</code>, but the <code>drum</code> and <code>step</code> websites use <code>POST</code> to allow longer input texts. The <code>drum</code> version of the site also provides extractions (terms, events, etc.), in addition to the <code>parse</code> version's output of words, tags, parse trees, and logical forms.</p>
+
+<h2>Query Parameters</h2>
+<p>All parameters are optional. If you omit <code>input</code>, you'll get a response with no <code>&lt;utt&gt;</code>s in it.</p>
+<dl>
+<dt><code>input</code>
+<dd>The text to be parsed. This should be a single sentence for <code>parse</code>, or a paragraph for <code>drum</code>. Putting a whole paper here is discouraged; use <a href="http://trips.ihmc.us/parser/papers/cgi/run-pmcid">run-pmcid</a> instead.
+<dt><code>tag-type</code>
+<dd>Select which kinds of tags TextTagger will output. These will appear in the <code>&lt;tags&gt;</code> element, and also be passed to the main TRIPS Parser module for further processing. The format of this option is presently beyond the scope of this document. <code>parse</code>, <code>cabot</code>, and <code>drum</code> have different default values for this parameter, so you can switch between them to switch to a different <code>tag-type</code>. Or you can use the tagger checkboxes in the browser interface to construct a <code>tag-type</code> to use.
+<dt><code>no-sense-words</code>
+<dd>Comma-separated list of words for which TextTagger will avoid outputting sense information (leaving it up to TRIPS' own lexicon).
+<dt><code>senses-only-for-penn-poss</code>
+<dd>Comma-separated list of <a href="http://www.cis.upenn.edu/~treebank/">Penn Treebank</a> part of speech tags for which TextTagger will output sense information (the default is to output sense information for all parts of speech).
+<dt><code>semantic-skeleton-scoring</code> (<code>step</code> only)
+<dd>If this parameter is present, use the SkeletonScorer module to guide parsing using our corpus of hand-annotated semantic skeletons. This is on by default when using the <code>step</code> web parser in a web browser, but if you're using this API programmatically you need to give this parameter explicitly if you want to use this feature (this is due to how checkboxes work in web forms).
+<dt><code>component</code>
+<dd>Select which component to focus on. The default is <code>parser</code>, but you can also use <code>texttagger</code>, which will only run the TextTagger component and not the Parser or the extractor, and will return a <code>&lt;texttagger-output&gt;</code> XML document instead of <code>&lt;trips-parser-output&gt;</code> (see TextTagger Output Format below).
+<dt><code>extsformat</code>, <code>tagsformat</code>, <code>treecontents</code>, <code>treeformat</code>, <code>lfformat</code>
+<dd>These parameters are just echoed back as attributes on the top element of the response XML. They're used by the web browser interface to preserve display options across requests.
+</dl>
+
+<h2>Parser Output Format</h2>
+<p>The web interface sends its response as an XML document, with an XSL stylesheet that instructs your web browser how to display the information it contains. If you're not using a web browser, you don't have to apply the stylesheet, so you can use the XML directly. This section describes the format of that XML response document. An outline of a typical response would be:</p>
+<blockquote><pre>
+&lt;?xml?&gt;
+&lt;?xml-stylesheet?&gt;
+&lt;!DOCTYPE&gt;
+&lt;trips-parser-output&gt;
+  &lt;debug&gt;
+    ...
+  &lt;/debug&gt;
+  &lt;ekb&gt;
+    &lt;input&gt;...&lt;/input&gt;
+    &lt;TERM&gt;...&lt;/TERM&gt;
+    &lt;EVENT&gt;...&lt;/EVENT&gt;
+    ...
+  &lt;/ekb&gt;
+  &lt;utt&gt;
+    &lt;words&gt;
+      &lt;lisp&gt;(...)&lt;/lisp&gt;
+      &lt;word&gt;...&lt;/word&gt;...
+    &lt;/words&gt;
+    &lt;tags&gt;
+      &lt;lisp&gt;(...)&lt;/lisp&gt;
+      &lt;word&gt;...&lt;/word&gt;
+      &lt;prefix&gt;...&lt;/prefix&gt;
+      ...
+      &lt;prefer&gt;...&lt;/prefer&gt;
+      ...
+    &lt;/tags&gt;
+    &lt;tree&gt;
+      &lt;lisp&gt;(...)&lt;/lisp&gt;
+      &lt;UTT&gt;&lt;S&gt;...&lt;/S&gt;&lt;/UTT&gt;
+    &lt;/tree&gt;
+    &lt;terms&gt;
+      &lt;lisp&gt;(...)&lt;/lisp&gt;
+      &lt;rdf:RDF&gt;
+        &lt;rdf:Description&gt;...&lt;/rdf:Description&gt;
+        ...
+      &lt;/rdf:RDF&gt;
+    &lt;/terms&gt;
+  &lt;/utt&gt;
+  ...
+&lt;/trips-parser-output&gt;
+</pre></blockquote>
+<p>Some of the XML elements used above are described below. <a href="trips-parser-output.dtd">The DTD</a> has a more complete list of the elements and attributes that can be used.</p>
+
+<h3><code>&lt;trips-parser-output&gt;</code></h3>
+<p>The root element of the XML document is <code>&lt;trips-parser-output&gt;</code>. Its attributes are the query parameters used to generate the response, along with <code>parser-build-date</code>, containing the date and time that the system that generated the document was built. Its children are <code>&lt;debug&gt;</code> (containing information that might be useful for debugging the TRIPS Parser), <code>&lt;ekb&gt;</code> (containing extractions, only in DRUM version), and either a single <code>&lt;utt&gt;</code> or a <code>&lt;compound-communication-act&gt;</code> containing multiple <code>&lt;utt&gt;</code>s. The output of the paragraph parsers (<code>drum</code> and <code>step</code>) may contain multiple top-level <code>&lt;utt&gt;</code>s/<code>&lt;compound-communication-act&gt;</code>s. Each <code>&lt;utt&gt;</code> represents a fully-parsed sentence ("utterance") or fragment, and its contents are described below. The <code>&lt;ekb&gt;</code> applies to the input as a whole, so it's outside any of the <code>&lt;utt&gt;</code>s. Its contents are described later in this document.</p>
+
+<p>In the event that a sentence or fragment completely fails to parse (e.g. because of an error), there will be an empty <code>&lt;failed-to-parse /&gt;</code> element instead of an <code>&lt;utt&gt;</code>.</p>
+
+<h3><code>&lt;utt&gt;</code></h3>
+<p>Each <code>&lt;utt&gt;</code> has four children: <code>&lt;words&gt;</code>, <code>&lt;tags&gt;</code>, <code>&lt;tree&gt;</code>, and <code>&lt;terms&gt;</code>. These are each described below. One feature they share is that they contain both a Lisp form and an XML form of the same information. The Lisp form is in the <code>&lt;lisp&gt;</code> child, and is the original Lisp S-expression output by TRIPS. The XML form is derived from it for ease of use (especially by the XSL stylesheet presenting the page in the web browser). This document mainly describes the XML form.</p>
+
+<h3><code>&lt;words&gt;</code></h3>
+<p>The <code>&lt;words&gt;</code> element contains the list of words (and other tokens), as processed by the main TRIPS Parser module. This means they use all-caps, split certain endings off, and replace certain punctuation characters. For example, "." becomes <code>&lt;word&gt;PUNC-PERIOD&lt;/word&gt;</code>, and "don't" becomes <code>&lt;word&gt;DO-&lt;/word&gt;&lt;word&gt;N^T&lt;/word&gt;</code>. Note that the <code>&lt;tags&gt;</code> element also contains <code>&lt;word&gt;</code> elements, but these are different and should be processed differently.</p>
+
+<h3><code>&lt;tags&gt;</code></h3>
+<p>The <code>&lt;tags&gt;</code> element contains the messages sent from the TextTagger preprocessing module to the main Parser module. There are three main types of message, <code>&lt;word&gt;</code>, <code>&lt;prefix&gt;</code> and <code>&lt;prefer&gt;</code>, but they share some arguments:</p>
+<dl>
+<dt><code>lex</code> or <code>text</code>
+<dd>The substring of the input string that the message talks about. <code>&lt;word&gt;</code> uses <code>lex</code> (for "lexical item"), and <code>&lt;prefer&gt;</code> uses <code>text</code>, but they're really the same thing.
+<dt><code>start</code> and <code>end</code>
+<dd>The character offsets of the boundaries of that substring, relative to the beginning of the whole input (not just the <code>&lt;utt&gt;</code>). Note that <code>end</code> is generally moved to the next start of a tag, so that there are no gaps.
+</dl>
+<p>It's important to note that TextTagger's output is often ambiguous, because the parser hasn't decided yet which of several options to take.</p>
+
+<h4><code>&lt;word&gt;</code></h4>
+<p>This message causes the Parser to build constituents based on the information in the message and add them directly to the chart. If there isn't enough information in the message itself to build constituents for a particular sense, it causes the Parser to look up the described word(s) in the lexicon (which may include using WordFinder to look it/them up in WordNet).</p>
+
+<p>At most one <code>&lt;word&gt;</code> message will be output for each <code>start/end</code> span. Different senses of the same word are represented as <code>&lt;sense-info&gt;</code> children. Each child has attributes and (possibly children) describing a set of senses. Each attribute is a comma-separated list of options, and selecting one option from a POS attribute and one from a sense attribute gives you a single sense. The following may be specified in a <code>&lt;sense-info&gt;</code>, but are not required:</p>
+
+<dl>
+<dt><code>penn-parts-of-speech</code>
+<dd><a href="http://www.cis.upenn.edu/~treebank/">Penn Treebank</a> style part of speech tags (I and II, they didn't change). Note that these actually contain morphological information as well as the basic part of speech. For example, verbs are split into <code>VB, VBD, VBG, VBN, VBP, VBZ</code>.
+<dt><code>trips-parts-of-speech</code> (deprecated)
+<dd>TRIPS-style parts of speech. These are now just mapped from the <code>penn-parts-of-speech</code>.
+<dt><code>wn-sense-keys</code>
+<dd><a href="http://wordnet.princeton.edu/">WordNet</a> 3.0 <a href="http://wordnet.princeton.edu/wordnet/man/senseidx.5WN.html#sect3">sense keys</a>. Note that most of the time the last two fields, <code>:head_word:head_id</code>, are empty, so TextTagger leaves them out (including the colons).
+<dt><code>ont-types</code>
+<dd><a href="http://www.cs.rochester.edu/research/cisd/projects/trips/lexicon/cgi/browseontology-ajax">TRIPS Ontology</a> types. Note that <a href="http://www.cs.rochester.edu/research/cisd/projects/trips/lexicon/cgi/browseontology-ajax?search=referential-sem#referential-sem"><code>ONT::referential-sem</code></a> is removed when there are other (more specific) sense options.
+<dt><code>alternate-spellings</code>
+<dd>Alternate spellings of the word (e.g. "color" vs. "colour").
+<dt><code>score</code>
+<dd>A single number between 0 and 1 indicating how good this sense is compared to the others, 1 being the best score. This is the maximum of the scores of the matches in the children.
+</dl>
+
+<p>The children of a <code>&lt;sense-info&gt;</code> element are for domain-specific information related to the sense. These don't affect parsing but are carried through to the Parser's output (all of them will be carried through for a given <code>&lt;sense-info&gt;</code>, not just one). The different kinds of domain-specific-info elements are described in the table below.</p>
+
+<p>In order to build constituents directly, without looking up the words, both part of speech (<code>penn-parts-of-speech</code> or <code>trips-parts-of-speech</code>) and sense (<code>wn-sense-keys</code> or <code>ont-types</code>) information must be present.</p>
+
+<p>There can be multiple <code>&lt;sense-info&gt;</code> children of the same <code>&lt;word&gt;</code> because we might want to allow only certain combinations of POS, sense, and domain-specific info. For example, if we want to express the fact that the word "crashes" can either be a plural noun with the sense key <code>"crash%1:11:03"</code> or a verb in 3<sup>rd</sup> person singular present tense with the sense key <code>"crash%2:30:10"</code>, but we want to exclude the possibility of mismatching the sense and the POS, we could use two different <code>&lt;sense-info&gt;</code>s:</p>
+<blockquote><pre>
+  &lt;word lex="crashes" start="0" end="7"&gt;
+    &lt;sense-info penn-parts-of-speech="NNS" wn-sense-keys="crash%1:11:03" /&gt;
+    &lt;sense-info penn-parts-of-speech="VBZ" wn-sense-keys="crash%2:30:10" /&gt;
+  &lt;/word&gt;
+</pre></blockquote>
+
+<h5>Kinds of domain-specific-info elements</h5>
+<table>
+<tr><th>element</th><th>argument (attribute or child element)</th><th>description</th></tr>
+<tr class="first"><th rowspan="9"><code>&lt;term&gt;</code></th><td class="spacer"></td><td>Information looked up from ontologies specific to the Deep Reading for Understanding Mechanisms (DRUM) system. Many of them are <a href="http://obofoundry.org/">OBO ontologies</a>.</td></tr>
+<tr><td><code>id</code></td><td>Identifier for a concept from one of the ontologies.</td></tr>
+<tr><td><code>name</code></td><td>More or less human-readable name for the concept.</td></tr>
+<tr><td><code>score</code></td><td>The maximum of the <code>score</code>s from the <code>match</code>es (see below).</td></tr>
+<tr><td><code>&lt;match score="..." matched="..." status="..." ... /&gt;</code></td><td>Describes the way the input string matched the string from the ontology (which may differ in case and hyphenation). There may be more than one of these. The <code>score</code> is a number between 0 and 1, 1 being the best (but not a probability). <code>matched</code> is the string from the ontology that matched. <code>status</code> is the status of that string in relation to the <code>id</code>, as encoded in that ontology. Other attributes are mostly word counts for ways corresponding words in the input string and the <code>matched</code> string match. These are used in computing the <code>score</code>.</td></tr>
+<tr><td><code>species</code></td><td>Species this protein is from, "Homo sapiens (Human)" or "Mus musculus (Mouse)" (more may be added in the future).</td></tr>
+<tr><td><code>dbxrefs</code></td><td>Comma-separated list of IDs of related concepts in other ontologies ("database cross-references").</td></tr>
+<tr><td><code>&lt;map to="<var>...</var>" through="<var>...</var>" /&gt;</code></td><td>Ontology mapping our system used to arrive at one of the <code>ont-types</code>, <code>to</code>, through another concept in the same ontology, <code>through</code>, which in some sense subsumes the tagged concept in that ontology.</td></tr>
+<tr><td><code>ont-types</code></td><td>Comma-separated list of TRIPS ontology types. This might not match the same attribute in the containing <code>&lt;sense-info&gt;</code>, because we combine any two of <code>ONT::gene</code>, <code>ONT::protein</code>, and <code>ONT::protein-family</code> from all the <code>&lt;term&gt;</code>s into a single <code>ONT::gene-protein</code> sense in the <code>&lt;sense-info&gt;</code>.</td></tr>
+<!-- TODO member-type, members, and pmod; I don't think these can currently happen in the web system? -->
+
+<tr class="first"><th rowspan="6"><code>&lt;specialist&gt;</code></th><td class="spacer"></td><td>Information looked up from the <a href="http://lexsrv3.nlm.nih.gov/Specialist/Summary/lexicon.html">SPECIALIST Lexicon</a>.</td></tr>
+<tr><td><code>eui</code></td><td>Unique ID of the lexicon entry.</td></tr>
+<tr><td><code>cat</code></td><td>Syntactic category.</td></tr>
+<tr><td><code>citation-form</code></td><td>Uninflected form of the word, like you would find in the heading of a dictionary entry.</td></tr>
+<tr><td><code>&lt;complement&gt;</code></td><td>Contains a complementation pattern from the lexicon entry. All of them are listed, not just the one that pertains to this use of the word.</td></tr>
+<tr><td><code>&lt;nominalization&gt;</code>,
+<code>&lt;nominalization-of&gt;</code>,
+<code>&lt;abbreviation&gt;</code>,
+<code>&lt;abbreviation-of&gt;</code>,
+<code>&lt;acronym&gt;</code>,
+<code>&lt;acronym-of&gt;</code></td><td>These all contain nested <code>&lt;specialist&gt;</code> entries related to the main entry.</td></tr>
+
+<tr class="first"><th rowspan="7"><code>&lt;mutation&gt;</code></th><td class="spacer"></td><td>Information derived by parsing certain kinds of protein <a href="http://www.hgmd.cf.ac.uk/docs/mut_nom.html">mutation specifications</a>.</td></tr>
+<tr><td><code>type</code></td><td>The type of mutation; one of <code>substitution</code>, <code>deletion</code>, or <code>insertion</code>.</td></tr>
+<tr><td><code>old</code></td><td>Amino acid that was deleted.</td></tr>
+<tr><td><code>new</code></td><td>Amino acid(s) that was/were inserted.</td></tr>
+<tr><td><code>aa-index</code></td><td>Amino acid index where the mutation took place.</td></tr>
+<tr><td><code>lower</code></td><td>Amino-acid-indexed site of the start of the mutation.</td></tr>
+<tr><td><code>upper</code></td><td>Ditto for the end.</td></tr>
+
+<tr class="first"><th><code>&lt;aa-site&gt;</code></th><td><code>name</code>, <code>letter</code>, <code>index</code></td><td>Protein site, identified by the amino acid and its index.</td></tr>
+
+<tr class="first"><th><code>&lt;amino-acid&gt;</code></th><td><code>name</code>, <code>letter</code></td><td>Normalized amino acid name and 1-letter code.</td></tr>
+
+<tr class="first"><th rowspan="4"><code>&lt;mirna&gt;</code></th><td class="spacer"></td><td>Information derived by parsing certain miRNA (micro-RNA) <a href="http://en.wikipedia.org/wiki/MicroRNA#Nomenclature">names</a>.</td></tr>
+<tr><td><code>type</code></td><td>The type of miRNA name, as determined by the case of the "mir" part: <code>mature</code>, <code>precursor-or-primary</code>, or <code>gene</code>.</td></tr>
+<tr><td><code>number</code></td><td>The part of the name after "mir-".</td></tr>
+<tr><td><code>species</code></td><td>The name of the species, expanded from the abbreviation before "mir", if present.</td></tr>
+
+<!-- TODO umls, but we never get that in the web system -->
+</table>
+
+<h4><code>&lt;prefix&gt;</code></h4>
+<p><code>&lt;prefix&gt;</code> messages are exactly like <code>&lt;word&gt;</code> messages except that they indicate the tagged string is only a prefix, connected to the following word. This information is useful because the <code>end</code> is always moved up to the next start of a tag, so it's not otherwise obvious whether there is whitespace between the two tags/"words". But note that <code>&lt;prefix&gt;</code> is only used when that beginning part of a word is semantically a prefix, like "hyper-" or "mono-". There are other situations where you can get multiple <code>&lt;word&gt;</code>s with no whitespace between them, for example CamelCase words, and words with endings like "n't".</p>
+
+<h4><code>&lt;prefer&gt;</code></h4>
+<p>This message causes the Parser to prefer certain kinds of consituents, without causing it to actually build any based on the contents of the message. These are used for things we don't have sense information for, but don't want to look up in the lexicon either (i.e. phrases, not words or multi-word lexical items). These attributes may be specified, and at least one is required:</p>
+
+<dl>
+<dt><code>penn-cats</code>
+<dd>A comma-separated list of <a href="http://www.cis.upenn.edu/~treebank/">Penn Treebank</a> II style syntactic category tags
+<dt><code>trips-cats</code> (deprecated)
+<dd>A comma-separated list of TRIPS-style syntactic categories. These are now just mapped from the <code>penn-cats</code>.
+</dl>
+</div>
+
+<h3><code>&lt;tree&gt;</code></h3>
+<p>The <code>&lt;tree&gt;</code> element contains the parse tree chosen as the best option by the parser. XML elements here map directly to nonterminals/syntactic categories. The leaves are just the words, as in the <code>&lt;words&gt;</code> element described above.</p>
+
+<h3><code>&lt;terms&gt;</code></h3>
+<p>The <code>&lt;terms&gt;</code> element contains the logical form (as a list of LF "terms"). The logical form is described separately in the <a href="LF%20Documentation.pdf">LF Documentation (pdf)</a>, using the Lisp format; only the mapping to XML is described here.<p>
+<p>The XML format uses <a href="http://www.w3.org/standards/techs/rdf">RDF</a> to represent the LF as a graph. Each <code>&lt;rdf:Description&gt;</code> corresponds to an LF term, and its <code>rdf:ID</code> is the term's "variable". Other parts of the LF term become RDF properties in either the <code>role</code> namespace (for arguments/slots like semantic roles), or the <code>LF</code> namespace (for everything else). The atomic ontology type becomes <code>LF:type</code>, and the word that is sometimes paired with it becomes <code>LF:word</code>. What the LF documentation calls the "term constructor" becomes <code>LF:indicator</code> (there is some disagreement in the TRIPS codebase over what to call this thing). Most terms output by the web parser also have <code>:start</code> and <code>:end</code> character offsets (roughly corresponding to the span of the input text containing the phrase that the term's word is the head of). These are both in the <code>LF</code> namespace. Everything else is in the <code>role</code> namespace, though some of them aren't exactly semantic roles. So, generally speaking, a Lisp-format term like this:</p>
+<blockquote><pre>
+(<var>foo</var> <var>bar</var> (:* ONT::<var>baz</var> W::<var>glarch</var>)
+  :<var>fred</var> <var>barney</var> :<var>wilma</var> <var>betty</var>
+  :start <var>i</var> :end <var>j</var>)
+</pre></blockquote>
+<p>turns into an RDF resource description like this:</p>
+<blockquote><code><pre>
+&lt;rdf:Description rdf:ID="<var>bar</var>"&gt;
+  &lt;LF:indicator&gt;<var>foo</var>&lt;/LF:indicator&gt;
+  &lt;LF:type&gt;<var>baz</var>&lt;/LF:type&gt;
+  &lt;LF:word&gt;<var>glarch</var>&lt;/LF:word&gt;
+  &lt;role:<var>fred</var> rdf:resource="#<var>barney</var>" /&gt;
+  &lt;role:<var>wilma</var>&gt;<var>betty</var>&lt;/role:<var>wilma</var>&gt;
+  &lt;LF:start&gt;<var>i</var>&lt;/LF:start&gt;
+  &lt;LF:end&gt;<var>j</var>&lt;/LF:end&gt;
+&lt;/rdf:Description&gt;
+</pre></code></blockquote>
+<p>The difference between <code><var>barney</var></code> and <code><var>betty</var></code> in this example is that <code><var>barney</var></code> is the variable from another LF term, while <code><var>betty</var></code> is a literal value. Some arguments of LF terms take lists of variables, which aren't directly representable in the LF graph. These are split into separate graph edges for each variable in the list. The <code>:TMA</code> argument is also split into separate edges for each pair it contains. Here is a table showing all the ways these arguments are split:</p>
+<table>
+<tr><th>Lisp argument</th><th>RDF properties</th></tr>
+<tr class="first"><td>:MEMBERS</td><td>role:MEMBER, role:MEMBER, ...</td></tr>
+<tr><td>:MODS</td><td>role:MOD, role:MOD, ...</td></tr>
+<tr><td>:AND</td><td>role:AND-ELEMENT, role:AND-ELEMENT, ...</td></tr>
+<tr><td>:OR</td><td>role:OR-ELEMENT, role:OR-ELEMENT, ...</td></tr>
+<tr><td>:SEQUENCE</td><td>role:SEQUENCE, role:SEQUENCE1, ...</td></tr>
+<tr><td>:ACTS</td><td>role:ACT, role:ACT1, ...</td></tr>
+<tr><td>:TMA ((TENSE ...) (PERF ...) (NEGATION ...) ...)</td>
+    <td>role:TENSE, role:PERF, role:NEGATION, ...</td></tr>
+</table>
+
+<h3><code>&lt;ekb&gt;</code></h3>
+<p>Note: this section may be incomplete or out of date; the <a href="https://github.com/wdebeaum/drum/blob/master/src/DrumGUI/docs/ekb.dtd">ekb.dtd</a> is a better reference.</p>
+
+<p>The <code>&lt;ekb&gt;</code> element contains the extraction knowledge base
+derived from the complete input. It currently has these kinds of child
+elements:
+<dl>
+  <dt><code>&lt;input&gt;</code></dt>
+  <dd>describes the input data</dd>
+  <dt><code>&lt;EVENT&gt;</code></dt>
+  <dd>describes an event extracted from the input text</dd>
+  <dt><code>&lt;TERM&gt;</code></dt>
+  <dd>describes a term (entity) extracted from the input text</dd>
+  <dt><code>&lt;MODALITY&gt;</code></dt>
+  <dd>describes a (linguistic) modality extracted from the input text</dd>
+  <dt><code>&lt;EPI&gt;</code></dt>
+  <dd>describes an epistemic modality extracted from the input text</dd>
+  <dt><code>&lt;CC&gt;</code></dt>
+  <dd>describes a causal connective extracted from the input text</dd>
+</dl>
+There can be only one <code>&lt;input&gt;</code> element, and zero or more
+elements of the other types. 
+
+These elements are outlined below in more detail (parts in square brackets are optional, and "..." means either "and so on", or "same format as before"):</p>
+<blockquote><code><pre>
+&lt;input&gt;
+  &lt;paragraphs&gt;
+    &lt;paragraph file="<var>filename</var>" id="<var>paragraph ID</var>"&gt;
+      <var>paragraph text</var>
+    &lt;/paragraph&gt;
+    ...
+  &lt;/paragraphs&gt;
+  &lt;sentences&gt;
+    &lt;sentence id="<var>utterance number</var>" pid="<var>paragraph ID</var>"&gt;
+      <var>sentence text</var>
+    &lt;/sentence&gt;
+    ...
+  &lt;/sentences&gt;
+&lt;/input&gt;
+
+&lt;TERM id="<var>term ID</var>"
+      [dbid="<var>external database reference ID</var>"]
+      start="<var>start character offset</var>" end="<var>end</var>"
+      paragraph="<var>paragraph ID</var>"
+      uttnum="<var>utterance number</var>"
+      lisp="<var>lisp form</var>"
+      rule="<var>extraction rule ID</var>"&gt;
+  &lt;type&gt;<var>TRIPS ontology type</var>&lt;/type&gt;
+  [&lt;mods&gt;
+     &lt;<var>mod or frequency or degree</var> start end&gt;
+       &lt;type ...&gt;
+       &lt;value ...&gt;
+     &lt;/<var>mod or frequency or degree</var>&gt;
+     ...
+   &lt;/mods&gt;]
+  [&lt;features&gt;
+    [&lt;active&gt;<var>value of the "active" feature</var>&lt;/active&gt;]
+    [&lt;location id="<var>ID of another term</var>" /&gt;]
+    [&lt;mutation id="<var>ID of another term</var>" /&gt;]
+    [&lt;mutation&gt;<var>TRUE or FALSE</var>&lt;/mutation&gt;]
+    [&lt;site id="<var>ID of another term</var>" /&gt;]
+    [&lt;site&gt;<var>... see sites under mutation below ...</var>&lt;/site&gt;]
+    [&lt;cell-line id="<var>ID of another term</var>" start end&gt;
+       &lt;type ...&gt;
+       &lt;text ...&gt;
+     &lt;/cell-line&gt;]
+    [&lt;inevent&gt;
+       &lt;event id="<var>ID of an event</var>" /&gt;
+       ...
+     &lt;/inevent&gt;]
+    [&lt;ptm type="<var>TRIPS ontology type</var>" event="<var>ID of an event</var>" /&gt;]
+    [&lt;bound-to id="<var>ID of another term</var>" event="<var>ID of an event</var>" /&gt;]
+   &lt;/features&gt;]
+  [&lt;not-features <var>...same as features, without active or inevent...</var> &gt;]
+  [&lt;name&gt;<var>name</var>&lt;/name&gt;]
+  [&lt;coref type="<var>ONT::PRO or ONT::PRO-SET</var>" [id="<var>ID of another term</var>"] /&gt;]
+  [&lt;equals id="<var>ID of another term</var>" provenance="<var>rule</var>" /&gt;]
+  [&lt;assoc-with id="<var>ID of another term</var>" /&gt;]
+  [&lt;members&gt;&lt;member type="ONT::PROTEIN" dbid="<var>external database reference ID</var>" /&gt;...&lt;/members&gt;]
+  [&lt;aggregate operator="<var>AND or OR</var>"&gt;&lt;member id="<var>id of another term</var>" /&gt;...&lt;/aggregate&gt;]
+  [&lt;components&gt;&lt;component id="<var>id of another term</var>" /&gt;...&lt;/components&gt;]
+  [&lt;mutation&gt;ONT::TRUE&lt;/mutation&gt;]
+  [&lt;mutation&gt;
+    &lt;type&gt;<var>DELETION or SUBSTITUTION or INSERTION</var>&lt;/type&gt;
+    [&lt;pos-from&gt;
+      &lt;site&gt;
+        [&lt;name&gt;<var>amino acid name</var>&lt;/name&gt;]
+	[&lt;code&gt;<var>amino acid code</var>&lt;/code&gt;]
+	[&lt;pos&gt;<var>amino acid index</var>&lt;/pos&gt;]
+      &lt;/site&gt;
+    &lt;/pos-from&gt;]
+    [&lt;pos-to&gt;&lt;site ...&gt;&lt;/pos-to&gt;]
+    [&lt;pos ...&gt;]
+    [&lt;aa-from&gt;&lt;site ...&gt;&lt;/aa-from&gt;]
+    [&lt;aa-to&gt;&lt;site ...&gt;&lt;/aa-to&gt;]
+    [&lt;insert&gt;
+      &lt;aa&gt;
+        [&lt;name&gt;<var>amino acid name</var>&lt;/name&gt;]
+	[&lt;code&gt;<var>amino acid code</var>&lt;/code&gt;]
+      &lt;/aa&gt;
+      ...
+    &lt;/insert&gt;]
+  &lt;/mutation&gt;]
+  &lt;text [normalization="<var>normalized version of text</var>"]&gt;<var>text of the term as it appears in the input</var>&lt;/text&gt;
+&lt;/TERM&gt;
+
+&lt;EVENT <var>same attributes as TERM, no dbid</var>&gt;
+  &lt;type ...&gt;
+  [&lt;negation&gt;<var>+ or -</var>&lt;/negation&gt;]
+  [&lt;polarity&gt;<var>ONT::POSITIVE or ONT::NEGATIVE</var>&lt;/polarity&gt;]
+  [&lt;force&gt;ONT::<var>TRUE or FALSE</var>&lt;/force&gt;]
+  [&lt;modality&gt;ONT::<var>word</var>&lt;/modality&gt;]
+  [&lt;epistemic-modality id="<var>id of an EPI element</var>" /&gt;]
+  [&lt;mods ...&gt;]
+  [&lt;aggregate ...&gt;]
+  [&lt;features&gt;
+    [&lt;inevent&gt; ...]
+   &lt;/features&gt;]
+  &lt;predicate id start end&gt;
+    &lt;type ...&gt;
+    &lt;text ...&gt;
+  &lt;/predicate&gt;
+  [&lt;arg1 id role="<var>role name</var>" start end&gt;
+     &lt;type ...&gt;
+     &lt;text ...&gt;
+   &lt;/arg1&gt;]
+  [&lt;arg2 ...&gt;]
+  ...
+  [&lt;site id start end&gt;
+     &lt;type ...&gt;
+     &lt;text ...&gt;
+   &lt;/site&gt;]
+  [&lt;location id mod start end&gt;
+     &lt;type ...&gt;
+     &lt;text ...&gt;
+   &lt;/location&gt;]
+  [&lt;from-location id start end&gt;
+     &lt;type ...&gt;
+     &lt;text ...&gt;
+   &lt;/from-location&gt;]
+  [&lt;to-location id start end&gt;
+     &lt;type ...&gt;
+     &lt;text ...&gt;
+   &lt;/to-location&gt;]
+  [&lt;cell-line id start end&gt;
+     &lt;type ...&gt;
+     &lt;text ...&gt;
+   &lt;/cell-line&gt;]
+  &lt;text ...&gt;
+&lt;/EVENT&gt;
+
+&lt;MODALITY <var>same attributes as EVENT</var>&gt;
+  &lt;type ...&gt;
+  [&lt;negation ...&gt;]
+  [&lt;polarity ...&gt;]
+  [&lt;epistemic-modality ...&gt;]
+  [&lt;arg1 ...&gt;]
+  ...
+  &lt;text ...&gt;
+&lt;/MODALITY&gt;
+
+&lt;EPI <var>same attributes as EVENT</var>&gt;
+  &lt;type ...&gt;
+  [&lt;negation ...&gt;]
+  [&lt;polarity ...&gt;]
+  [&lt;force ...&gt;]
+  [&lt;modality ...&gt;]
+  [&lt;arg1 ...&gt;]
+  ...
+  &lt;text ...&gt;
+&lt;/EPI&gt;
+
+&lt;CC <var>same attributes as EVENT</var>&gt;
+  &lt;type ...&gt;
+  [&lt;negation ...&gt;]
+  [&lt;polarity ...&gt;]
+  [&lt;force ...&gt;]
+  [&lt;modality ...&gt;]
+  [&lt;epistemic-modality ...&gt;]
+  [&lt;arg ...&gt;]
+  ...
+  &lt;text ...&gt;
+&lt;/CC&gt;
+</pre></code></blockquote>
+
+<p>Note that the <code>uttnum</code> and <code>paragraph</code> attributes are not particularly meaningful in this context. In particular, <code>uttnum</code> does <em>not</em> number <code>&lt;utt&gt;</code> elements. The <code>id</code> attribute may or may not correspond to LF term IDs from the <code>&lt;terms&gt;</code> element described earlier.</p>
+
+<h2>TextTagger Output Format</h2>
+<p>When <code>component=texttagger</code>, only TextTagger runs, so there is less information in the response, and its top-level structure is slightly different:</p>
+<blockquote><pre>
+&lt;?xml?&gt;
+&lt;?xml-stylesheet?&gt;
+&lt;!DOCTYPE&gt;
+&lt;texttagger-output&gt;
+  &lt;debug&gt;
+    ...
+  &lt;/debug&gt;
+  &lt;utterance&gt;
+    &lt;tags&gt;
+      &lt;lisp&gt;(...)&lt;/lisp&gt;
+      &lt;word&gt;...&lt;/word&gt;
+      &lt;prefix&gt;...&lt;/prefix&gt;
+      ...
+      &lt;prefer&gt;...&lt;/prefer&gt;
+      ...
+    &lt;/tags&gt;
+  &lt;/utterance&gt;
+  ...
+&lt;/texttagger-output&gt;
+</pre></blockquote>
+<p>The new elements are described below.</p>
+<h3><code>&lt;texttagger-output&gt;</code></h3>
+<p>This is the same as <code>&lt;trips-parser-output&gt;</code>, except it omits the attributes that are only relevant for components other than TextTagger (e.g. <code>lfformat</code>).</p>
+<h3><code>&lt;utterance&gt;</code></h3>
+<p>This is like <code>&lt;utt&gt;</code>, except that it represents TextTagger's utterance segmentation instead of the Parser's, and its only child is <code>&lt;tags&gt;</code> (everything under <code>&lt;tags&gt;</code> is the same as in the Parser output format). Instead of a <code>&lt;words&gt;</code> child, it has a <code>text</code> attribute containing the part of the input text this utterance covers (<code>&lt;words&gt;</code> comes from the Parser, and represents more of a commitment to a particular word segmentation than TextTagger generally makes).</p>
+
+</body>
+</html>
