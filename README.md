@@ -1,11 +1,12 @@
 # WebParser #
 
 This repository can be added in the src/ directory of any of the TRIPS systems
-available on github (at time of writing, these are [bob](../bob),
-[cabot](../cabot), [cogent](../cogent), [drum](../drum), and [step](../step))
-in order to replicate the websites for those systems' parsers ([indexed
-here](http://trips.ihmc.us/parser/). This is a manually-updated mirror of the
-`src/WebParser/` directory in the TRIPS CVS repository.
+available on github (at time of writing, these are [bob](../../../bob),
+[cabot](../../../cabot), [cogent](../../../cogent), [drum](../../../drum), and
+[step](../../../step)) in order to replicate the websites for those systems'
+parsers ([indexed here](http://trips.ihmc.us/parser/)). This is a
+manually-updated mirror of the `src/WebParser/` directory in the TRIPS CVS
+repository.
 
 The main documentation for the CVS version is in [README.txt](README.txt). The
 quick start guide there talks about getting stuff from CVS, which you probably
@@ -30,7 +31,7 @@ image..."
 
 ## Licensing ##
 
-The files in the `exslt/` subdirectory are from the [EXSLT website](http://exslt.org), which is [on github](https://github.com/exslt/exslt.github.io) with an MIT license (see [exslt/LICENSE](exslt/LICENSE).
+The files in the `exslt/` subdirectory are from the [EXSLT website](http://exslt.org), which is [on github](https://github.com/exslt/exslt.github.io) with an MIT license (see [exslt/LICENSE](exslt/LICENSE)).
 
 The rest of the code uses the same license as TRIPS, [GPL 2+](http://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html) (see [LICENSE.txt](LICENSE.txt), and the notice below).
 
