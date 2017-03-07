@@ -254,7 +254,7 @@
        program args :output s)
     (get-output-stream-string s)))
 
-(defvar *os-type* (intern (string-upcase (string-trim '(#\Space #\Newline #\Tab) (run-program-and-read-output "/usr/bin/uname")))))
+(defvar *os-type* (intern (string-upcase (string-trim '(#\Space #\Newline #\Tab) (run-program-and-read-output "/bin/sh" "-c" "uname")))))
 
 (defun get-file-change-date-string (filename)
   "Return a string representing the date that the named file was last changed,
