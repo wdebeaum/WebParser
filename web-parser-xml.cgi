@@ -16,6 +16,6 @@ LISP="/usr/local/bin/openmcl --batch --noinit --image-name ../etc/lisp/web-parse
 # Linux/cmucl
 LISP="/u/www/research/trips/parser/cmucl/latest/bin/lisp -quiet -nositeinit -noinit -core ../etc/lisp/web-parser-xml.image"
 
-perl -e 'print localtime() . "\t$ENV{REMOTE_ADDR}\t$ENV{QUERY_STRING}\n";' >>web-parser.log
+perl -T -e 'print localtime() . "\t$ENV{REMOTE_ADDR}\t$ENV{QUERY_STRING}\n";' >>web-parser.log
 
 exec $LISP

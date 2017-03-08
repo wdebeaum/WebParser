@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -T -I.
 
 # cgi-kqml-bridge.pl - CGI script that simply sends the HTTP request on to the
 # Facilitator in KQML, waits for a response, and converts it back to HTTP
