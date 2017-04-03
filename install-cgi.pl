@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 # install-cgi.pl - install renamed copies of cgi-kqml-bridge.pl with the appropriate addresses for those names and the current hostname
-# 2016-07-29
+# 2017-04-03
 # William de Beaumont
 
 use strict 'vars';
@@ -20,6 +20,7 @@ my %tiu_addresses = qw(
   bob		184.182.233.216:6205
   cogent	184.182.233.216:6206
   drum-dev	184.182.233.216:6241
+  drum-er	184.182.233.216:6241
   step-dev	184.182.233.216:6243
 );
 

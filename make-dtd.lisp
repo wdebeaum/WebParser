@@ -49,6 +49,7 @@ Value VAL
 <!ATTLIST trips-parser-output input CDATA #IMPLIED
 			      system CDATA #REQUIRED
 			      parser-build-date CDATA #REQUIRED
+			      extscontents CDATA #IMPLIED
 			      extsformat CDATA #REQUIRED
 			      tagsformat CDATA #REQUIRED
 			      treecontents CDATA #REQUIRED

@@ -8,7 +8,9 @@
 
  <xsl:template match="/trips-parser-output | /texttagger-output">
   <xsl:variable name="title">
-   <xsl:text>TRIPS/DRUM </xsl:text>
+   <xsl:text>TRIPS/DRUM</xsl:text>
+   <xsl:if test="@extscontents">-ER</xsl:if>
+   <xsl:text> </xsl:text>
    <xsl:choose>
     <xsl:when test="/trips-parser-output">
      <xsl:text>Parser</xsl:text>

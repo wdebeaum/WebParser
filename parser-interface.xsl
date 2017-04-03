@@ -33,8 +33,17 @@
  </xsl:template>
 
  <xsl:template match="ekb">
-  <h2 title="Extracted terms, events, etc.">Extractions</h2>
-  <pre class="exts-lisp">
+  <xsl:variable name="type">
+   <xsl:choose>
+    <xsl:when test="count(../ekb) = 1"></xsl:when>
+    <xsl:when test="count(preceding::ekb) = 0"><xsl:text>raw-</xsl:text></xsl:when>
+    <xsl:when test="count(preceding::ekb) = 1"><xsl:text>inf-</xsl:text></xsl:when>
+   </xsl:choose>
+  </xsl:variable>
+  <xsl:if test="count(preceding::ekb) = 0">
+   <h2 title="Extracted terms, events, etc.">Extractions</h2>
+  </xsl:if>
+  <pre class="exts-{$type}lisp">
    <xsl:text>(</xsl:text>
    <xsl:for-each select=".//@lisp">
     <xsl:value-of select="." />
@@ -44,10 +53,10 @@
    <xsl:text>)
 </xsl:text>
   </pre>
-  <div class="exts-table">
+  <div class="exts-{$type}table">
    <xsl:apply-templates select="." mode="exts-to-table" />
   </div>
-  <div class="exts-svg">
+  <div class="exts-{$type}svg">
    <xsl:variable name="rdf">
     <xsl:apply-templates select="." mode="exts-to-rdf" />
    </xsl:variable>
@@ -161,6 +170,12 @@
     .exts-lisp { }
     .exts-table { }
     .exts-svg { }
+    .exts-raw-lisp { }
+    .exts-raw-table { }
+    .exts-raw-svg { }
+    .exts-inf-lisp { }
+    .exts-inf-table { }
+    .exts-inf-svg { }
     .tags-lisp { }
     .tags-table { }
     .tree-full-lisp { }
@@ -184,6 +199,22 @@
  </xsl:template>
 
  <xsl:template name="parser-interface-options">
+  <xsl:if test="@extscontents">
+   <label title="The content of the &quot;Extractions&quot; section">Extractions contents: <select id="extscontents" name="extscontents" onchange="setAllDisplay()">
+    <option value="raw">
+     <xsl:if test="@extscontents = 'raw'">
+      <xsl:attribute name="selected">selected</xsl:attribute>
+     </xsl:if>
+     Raw extractions
+    </option>
+    <option value="inf">
+     <xsl:if test="@extscontents = 'inf'">
+      <xsl:attribute name="selected">selected</xsl:attribute>
+     </xsl:if>
+     Inferred extractions
+    </option>
+   </select></label>
+  </xsl:if>
   <label title="The format of the &quot;Extractions&quot; section">Extractions format: <select id="extsformat" name="extsformat" onchange="setAllDisplay()">
    <option value="lisp">
     <xsl:if test="@extsformat = 'lisp'">

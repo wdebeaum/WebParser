@@ -133,6 +133,7 @@
 ;	(error "bogus request uri: ~s" request-uri))
       (destructuring-bind ( &key input
       			    (component "parser")
+			    (extscontents "raw")
 			    (extsformat "svg")
 			    tagsformat
 			    (treecontents "phrase")
@@ -155,6 +156,8 @@
 		   :stylesheet
 		     ,(if (eq :drum trips::*trips-system*)
 			"drum-interface.xsl" "parser-interface.xsl")
+		   ,@(when (string= uri-basename "drum-er")
+		     `(:extscontents ,extscontents))
 		   :extsformat ,extsformat
 		   :tagsformat
 		     ,(cond
@@ -206,6 +209,8 @@
 				    (format nil *rule-set-path-format* rule-set)
 				    ))
 		       `(:rule-set ,rule-set))
+		     ,@(when (string= uri-basename "drum-er")
+		       '(:do-inference t))
 		   )
 		 :requester ,(find-arg-in-act msg :sender)
 		 :reply-id ,(find-arg-in-act msg :reply-with)

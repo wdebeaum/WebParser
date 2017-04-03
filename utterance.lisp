@@ -4,7 +4,7 @@
 (defstruct text-unit
   text ; input text
   component ; parser or texttagger
-  interface-options ; extsformat, tagsformat, treecontents, treeformat, lfformat, debug
+  interface-options ; extscontents, extsformat, tagsformat, treecontents, treeformat, lfformat, debug
   texttagger-options ; see ../TextTagger/docs/README.xhtml
   parser-options ; see ../Parser/...
   extraction-options ; see ../NewIM/...
@@ -166,13 +166,20 @@
       ;; ditto parser/extraction options
       (set-parser-options (paragraph-parser-options para))
       (set-extraction-options (paragraph-extraction-options para))
-      (let ((dg-reply
-	      (send-and-wait `(request :receiver drum :content
-		  (load-text :text ,(paragraph-text para))))))
+      (let* ((do-inference (find-arg (paragraph-extraction-options para) :do-inference))
+             (dg-reply
+	       (send-and-wait `(request :receiver drum :content
+		   (load-text :text ,(paragraph-text para)
+			      ,@(when do-inference
+				'(:do-inference true)))))))
 	(unless (eq 'result (car dg-reply))
 	  (error "Bad reply from DrumGUI: ~s" dg-reply))
 	(setf (paragraph-uttnums para) (find-arg-in-act dg-reply :uttnums))
 	(setf (paragraph-extractions para) (find-arg-in-act dg-reply :extractions))
+	(let ((inf-ekb (find-arg-in-act dg-reply :inferred-ekb)))
+	  (when inf-ekb
+	    (setf (paragraph-extractions para)
+		  (concatenate 'string (paragraph-extractions para) inf-ekb))))
 	(setf *last-uttnum* (car (last (paragraph-uttnums para))))
 	)
       )

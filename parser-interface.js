@@ -1,5 +1,6 @@
 var xhtmlNS = "http://www.w3.org/1999/xhtml";
 var svgNS = "http://www.w3.org/2000/svg";
+var extscontents;
 var extsformat;
 var tagsformat;
 var treecontents;
@@ -10,6 +11,7 @@ var debugDiv;
 var displayCSSRules;
 
 function initVars() {
+  extscontents = document.getElementById("extscontents");
   extsformat = document.getElementById("extsformat");
   tagsformat = document.getElementById("tagsformat");
   treecontents = document.getElementById("treecontents");
@@ -25,7 +27,7 @@ function setDisplay(node, displayOn) {
 }
 
 function setAllDisplay() {
-  var extsSel = '.exts-' + (extsformat===null ? 'none' : extsformat.value);
+  var extsSel = '.exts-' + (extscontents===null ? '' : (extscontents.value + '-')) + (extsformat===null ? 'none' : extsformat.value);
   var tagsSel = '.tags-' + tagsformat.value;
   var treeSel = '.tree-' + (treecontents===null ? 'none' : (treecontents.value + '-' + treeformat.value));
   var lfSel = '.lf-' + (lfformat===null ? 'none' : lfformat.value);
