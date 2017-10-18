@@ -72,7 +72,7 @@ William de Beaumont
 </xsl:template>
 
 <xsl:template match="inevent" mode="exts-to-rdf">
- <xsl:for-each select="event/@id">
+ <xsl:for-each select="./@id">
   <role:inevent rdf:resource="#{.}" />
  </xsl:for-each>
 </xsl:template>

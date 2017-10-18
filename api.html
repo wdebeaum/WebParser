@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="cvsId" content="$Id: api.html,v 1.21 2017/01/13 21:40:35 wdebeaum Exp $">
+<meta name="cvsId" content="$Id: api.html,v 1.23 2017/09/12 14:29:58 wdebeaum Exp $">
 <meta charset="UTF-8">
 <title>TRIPS Parser Web API Documentation</title>
 <style type="text/css">
@@ -147,7 +147,7 @@ tr.first th {
 <dt><code>ont-types</code>
 <dd><a href="http://www.cs.rochester.edu/research/cisd/projects/trips/lexicon/cgi/browseontology-ajax">TRIPS Ontology</a> types. Note that <a href="http://www.cs.rochester.edu/research/cisd/projects/trips/lexicon/cgi/browseontology-ajax?search=referential-sem#referential-sem"><code>ONT::referential-sem</code></a> is removed when there are other (more specific) sense options.
 <dt><code>alternate-spellings</code>
-<dd>Alternate spellings of the word (e.g. "color" vs. "colour").
+<dd>Alternate spellings of the word (e.g. "color" vs. "colour"). Also includes corrected spellings. The <code>lex</code> attribute will retain the original spelling.
 <dt><code>score</code>
 <dd>A single number between 0 and 1 indicating how good this sense is compared to the others, 1 being the best score. This is the maximum of the scores of the matches in the children.
 </dl>
@@ -206,6 +206,30 @@ tr.first th {
 <tr><td><code>type</code></td><td>The type of miRNA name, as determined by the case of the "mir" part: <code>mature</code>, <code>precursor-or-primary</code>, or <code>gene</code>.</td></tr>
 <tr><td><code>number</code></td><td>The part of the name after "mir-".</td></tr>
 <tr><td><code>species</code></td><td>The name of the species, expanded from the abbreviation before "mir", if present.</td></tr>
+
+<tr class="first"><th rowspan="5"><code>&lt;pitch&gt;</code></th><td class="spacer"></td><td>Musical pitch.</td></tr>
+<tr><td><code>letter</code></td><td>The letter (A-G) identifying the basic pitch, independent of any key.</td></tr>
+<tr><td><code>scale-degree</code></td><td>The number (1-7) identifying the basic pitch relative to the key.</td></tr>
+<tr><td><code>semitones-above-natural</code></td><td>Encodes accidentals on the letter-based pitch. Flats subtract 1 and sharps add 1. Natural is 0. If this argument is missing, it means you should use context to determine the value (it's not necessarily 0).</td></tr>
+<tr><td><code>octave</code></td><td>The number (0-9) identifying the octave of the letter-based pitch.</td></tr>
+
+<tr class="first"><th rowspan="3"><code>&lt;interval&gt;</code></th><td class="spacer"></td><td>Musical interval between two pitches.</td></tr>
+<tr><td><code>quality</code></td><td>The interval quality; one of <code>diminished</code>, <code>minor</code>, <code>perfect</code>, <code>major</code>, or <code>augmented</code>.</td></tr>
+<tr><td><code>scale-degree-span</code></td><td>The number of scale degrees within the interval, e.g. 3&#x302; to 5&#x302; is a third interval and has <code>scale-degree-span="3"</code> (note: <b>not</b> 5 - 3 = 2).</td></tr>
+
+<tr class="first"><th rowspan="7"><code>&lt;chord&gt;</code></th><td class="spacer"></td><td>Musical chord.</td></tr>
+<tr><td><code>quality</code></td><td>The chord quality; one of the interval qualities listed above, or <code>half-diminished</code> (which actually specifies the qualities of two of the intervals in a seventh chord).</td></tr>
+<tr><td><code>inversion</code></td><td>The number of the inversion of the chord, e.g. ii<sup>6</sup> is a ii chord in first inversion, so this argument would be 1.</td></tr>
+<tr><td><code>&lt;root&gt;</code></td><td>Contains the <code>&lt;pitch&gt;</code> that the chord is built up from, before inversion, e.g. the root of a ii<sup>6</sup> chord is 2&#x302;.</td></tr>
+<tr><td><code>&lt;bass&gt;</code></td><td>Contains the lowest <code>&lt;pitch&gt;</code> in the chord, after inversion, e.g. the bass of a "G/B bass" chord is B.</td></tr>
+<tr><td><code>&lt;intervals-above-bass&gt;</code></td><td>Contains <code>&lt;interval&gt;</code>s between the bass pitch and the other pitches in the chord. Used for roman numeral/scale degree based chords. Omitted in the common case of a major triad.</td></tr>
+<tr><td><code>&lt;intervals-above-root&gt;</code></td><td>Contains <code>&lt;interval&gt;</code>s between the root pitch and the other pitches in the chord. Used for letter-based chords. Omitted in the common case of a major triad.</td></tr>
+
+<tr class="first"><th rowspan="2"><code>&lt;progression&gt;</code></th><td class="spacer"></td><td>Musical chord progression.</td></tr>
+<tr><td><code>&lt;members&gt;</code></td><td>Contains the <code>&lt;chord&gt;</code>s in the progression.</td></tr>
+
+<tr class="first"><th rowspan="2"><code>&lt;pitch-sequence&gt;</code></th><td class="spacer"></td><td>Sequence of musical pitches. It's unspecified whether this is melody or harmony.</td></tr>
+<tr><td><code>&lt;members&gt;</code></td><td>Contains the <code>&lt;pitch&gt;</code>es in the sequence.</td></tr>
 
 <!-- TODO umls, but we never get that in the web system -->
 </table>

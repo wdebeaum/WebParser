@@ -1,6 +1,7 @@
 (in-package :webparser)
 
 (defvar +dsi-arg-types+ '( ; should be defconstant, but that doesn't work
+  ;; DRUM/BOB
   (term
     :id foreign-symbol
     :name string
@@ -49,6 +50,7 @@
     :number string
     :species string
     )
+  ;; CERNL
   (umls
     :cui symbol
     :concept string
@@ -61,6 +63,31 @@
     :snomedct-isa (list-of symbol)
     :ancestors (list-of dsi)
     :sources (list-of symbol)
+    )
+  ;; Musica
+  (pitch
+    :letter symbol
+    :scale-degree integer
+    :semitones-above-natural integer
+    :octave integer
+    )
+  (interval
+    :quality symbol
+    :scale-degree-span integer
+    )
+  (chord
+    :root dsi
+    :bass dsi
+    :quality symbol
+    :inversion integer
+    :intervals-above-bass (list-of dsi)
+    :intervals-above-root (list-of dsi)
+    )
+  (progression
+    :members (list-of dsi)
+    )
+  (pitch-sequence
+    :members (list-of dsi)
     )
   )
   "An assoc list from domain-specific-info types to keyword-argument lists

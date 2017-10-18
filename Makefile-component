@@ -11,6 +11,7 @@ include $(CONFIGDIR)/Graphviz/defs.mk
 WWW_DIR = $(prefix)/www
 CGI_DIR = $(WWW_DIR)/cgi
 STYLE_DIR = $(WWW_DIR)/style
+ETC_STYLE_DIR = $(etcdir)/style
 
 CGI_FILES = dot-htaccess cgi-kqml-bridge.pl ../KQML/KQML.pm dot-to-svg.pl
 STYLE_FILES = word-def.xsl drum-interface.xsl parser-interface.xsl parser-interface.js parser-interface.css tree-to-lisp.xsl tree-to-LinGO.xsl tree-to-dot.xsl lf-to-html.xsl lf-to-amr.xsl lf-to-dot.xsl tags-to-table.xsl exts-to-table.xsl exts-to-rdf.xsl ekb-to-dot.xsl exslt/str.replace.template.xsl exslt/str.tokenize.template.xsl
@@ -30,6 +31,13 @@ install:: $(CGI_FILES) $(STYLE_FILES) $(OTHER_WWW_FILES)
 	done
 	$(INSTALL_DATA) $(STYLE_FILES) $(STYLE_DIR)
 	$(INSTALL_DATA) $(OTHER_WWW_FILES) $(WWW_DIR)
+
+# some style files may be installed independently of the others, as they can be
+# useful for other purposes; these are installed in ($etcdir)/style/.
+EKB_STYLE_FILES = ekb-to-dot.xsl exts-to-rdf.xsl lf-to-dot.xsl exslt/str.replace.template.xsl
+install-ekb-style: ${EKB_STYLE_FILES}
+	$(MKINSTALLDIRS) $(ETC_STYLE_DIR)
+	$(INSTALL_DATA) $(EKB_STYLE_FILES) $(ETC_STYLE_DIR)
 
 dot-htaccess:
 	( case `hostname` in \

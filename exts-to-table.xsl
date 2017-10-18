@@ -226,7 +226,7 @@ William de Beaumont
 </xsl:template>
 
 <xsl:template match="inevent" mode="exts-to-table">
- <xsl:for-each select="event/@id">
+ <xsl:for-each select="./@id">
   <xsl:if test="position() != 1">
    <xsl:text>, </xsl:text>
   </xsl:if>

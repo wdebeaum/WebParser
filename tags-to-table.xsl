@@ -138,6 +138,47 @@ William de Beaumont
  </xsl:for-each>
 </xsl:template>
 
+<xsl:template match="pitch" mode="tags-to-table">
+ <xsl:value-of select="@letter | @scale-degree" />
+ <xsl:if test="@scale-degree">&#x302;</xsl:if> <!-- hat -->
+ <xsl:choose>
+  <xsl:when test="@semitones-above-natural &lt; 0">
+   <xsl:value-of select="substring('♭♭♭', 1, - @semitones-above-natural)" />
+  </xsl:when>
+  <xsl:when test="@semitones-above-natural &gt; 0">
+   <xsl:value-of select="substring('♯♯♯', 1, @semitones-above-natural)" />
+  </xsl:when>
+ </xsl:choose>
+ <xsl:value-of select="@octave" />
+</xsl:template>
+
+<xsl:template match="interval" mode="tags-to-table">
+ <xsl:value-of select="@quality" />
+ <xsl:text> </xsl:text>
+ <xsl:value-of select="@scale-degree-span" />
+ <xsl:choose>
+  <xsl:when test="@scale-degree-span = 2">nd</xsl:when>
+  <xsl:when test="@scale-degree-span = 3">rd</xsl:when>
+  <xsl:otherwise>th</xsl:otherwise>
+ </xsl:choose>
+</xsl:template>
+
+<xsl:template match="chord" mode="tags-to-table">
+ <xsl:for-each select="@*|*">
+  <xsl:value-of select="local-name()" />
+  <xsl:text>: </xsl:text>
+  <xsl:choose>
+   <xsl:when test="self::node()">
+    <xsl:apply-templates select="." mode="tags-to-table" />
+   </xsl:when>
+   <xsl:otherwise>
+    <xsl:value-of select="." />
+   </xsl:otherwise>
+  </xsl:choose>
+  <xsl:text>; </xsl:text>
+ </xsl:for-each>
+</xsl:template>
+
 <xsl:template match="sense-info" mode="tags-to-table">
  <td><xsl:value-of select="@penn-parts-of-speech" /></td>
  <td>
@@ -227,6 +268,25 @@ William de Beaumont
 	    <xsl:text>) at </xsl:text>
 	   </xsl:if>
 	   <xsl:value-of select="aa-site/@index" />
+	  </xsl:when>
+	  <xsl:when test="self::root | self::bass">
+	   <xsl:apply-templates select="pitch" mode="tags-to-table" />
+	  </xsl:when>
+	  <xsl:when test="self::members">
+	   <xsl:text>(see above)</xsl:text>
+	   <!-- kind of a cop-out since I can't get the following to look right-->
+	   <!-- xsl:for-each select="*">
+	    <xsl:if test="position() != 1"><xsl:text>, </xsl:text></xsl:if>
+	    <xsl:text>(</xsl:text>
+	    <xsl:apply-templates select="." mode="tags-to-table" />
+	    <xsl:text>)</xsl:text>
+	   </xsl:for-each -->
+	  </xsl:when>
+	  <xsl:when test="self::intervals-above-bass | self::intervals-above-root">
+	   <xsl:for-each select="*">
+	    <xsl:if test="position() != 1"><xsl:text>, </xsl:text></xsl:if>
+	    <xsl:apply-templates select="." mode="tags-to-table" />
+	   </xsl:for-each>
 	  </xsl:when>
 	  <xsl:when test="local-name() = 'ont-types'"> <!-- ONT types aren't drum IDs -->
 	   <xsl:apply-templates select="." mode="tags-to-table" />

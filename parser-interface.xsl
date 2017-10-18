@@ -467,6 +467,12 @@
 	    </ul>
 	   </li>
 	  </xsl:if>
+	  <xsl:if test="@system = 'WEB-TOOLS' or @system = 'BOB'">
+	   <li title="Uses GNU Aspell to correct misspellings. Sometimes aspell will split words; in that case this tagger also outputs subword tags. We use the Specialist lexicon for the spelling dictionary."><label><input type="checkbox" /> misspellings</label></li>
+	  </xsl:if>
+	  <xsl:if test="@system = 'WEB-TOOLS' or @system = 'MUSICA'">
+	   <li title="Tags music-related terms and abbreviations, such as pitches, intervals, and chords."><label><input type="checkbox" /> music</label></li>
+	  </xsl:if>
 	  <xsl:if test="@system = 'STEP'">
 	   <li title="Uses the Stanford NER to find named entities with lftypes ORGANIZATION, PERSON, or GEOGRAPHIC-REGION."><label><input type="checkbox" /> named_entities</label></li>
 	  </xsl:if>

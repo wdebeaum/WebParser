@@ -2,7 +2,7 @@
 
 # cgi-kqml-bridge.pl - CGI script that simply sends the HTTP request on to the
 # Facilitator in KQML, waits for a response, and converts it back to HTTP
-# 2014-07-10
+# 2017-08-09
 # William de Beaumont
 
 use CGI qw/:standard :cgi-lib/;
@@ -25,7 +25,9 @@ $request_path = quote_for_kqml($request_path);
 my %params = Vars();
 my $query = '';
 for my $key (keys %params) {
-  $query .= " :$key " . quote_for_kqml($params{$key});
+  my $clean_key = $key;
+  $clean_key =~ s/[^\w-]/_/g;
+  $query .= " :$clean_key " . quote_for_kqml($params{$key});
 }
 $query = ":query ($query)" unless ($query eq '');
 my $reply_id = "web" . int(rand(10000));

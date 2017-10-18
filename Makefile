@@ -14,6 +14,11 @@ include $(CONFIGDIR)/Graphviz/defs.mk
 include $(CONFIGDIR)/lisp/defs.mk
 include $(CONFIGDIR)/lisp/$(LISP_FLAVOR)/defs.mk
 
+# get rid of --no-userinit, because I use mine to make compilation less
+# verbose, and I want it to still apply when cron sends me the output of
+# update-web-tools.sh in an email -- wdebeaum
+LISPCMD:=$(filter-out --no-userinit,$(LISPCMD))
+
 all: web-parser-xml.image trips-parser-output.dtd
 
 web-parser-xml.image: web-parser-xml.lisp parse-to-xml.lisp tree-to-xml.lisp lf-to-rdf.lisp
