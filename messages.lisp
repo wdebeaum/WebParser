@@ -86,26 +86,6 @@
        (every #'name-char-p str)
        ))
 
-(defun whitespace-char-p (c)
-  "Is c a whitespace character? (why Common Lisp doesn't have this already I'll never know...)"
-  (member c '(#\Space #\Tab #\Newline #\Return)))
-
-(defun string-safe-to-read-p (str)
-  "Is the given string safe to call read-from-string on?"
-  (and
-    ;; contains some non-whitespace characters
-    (some (lambda (c) (not (whitespace-char-p c))) str)
-    ;; contains only simple symbols, parens, and whitespace
-    (every
-      (lambda (c) 
-	(or (alpha-char-p c)
-	    (digit-char-p c)
-	    (whitespace-char-p c)
-	    (member c '(#\- #\_ #\$ #\( #\)))))
-      str)
-    ;; TODO check paren balance?
-    ))
-
 (defun parse-comma-separated-list (str)
   "Remove whitespace, upcase, split on commas, and intern."
   (mapcar #'intern
@@ -141,6 +121,7 @@
 			    (lfformat "svg")
 			    debug
 			    tag-type
+			    input-terms
 			    no-sense-words
 			    senses-only-for-penn-poss
 			    semantic-skeleton-scoring
@@ -172,8 +153,10 @@
 		 )
 		 :texttagger-options
 		   (
-		     ,@(when (and tag-type (string-safe-to-read-p tag-type))
-		       (list :tag-type (read-from-string tag-type)))
+		     ,@(when (and tag-type (not (string= "" tag-type)))
+		       (list :tag-type (read-safely-from-string tag-type)))
+		     ,@(when (and input-terms (not (string= "" input-terms)))
+		       (list :input-terms (read-safely-from-string input-terms)))
 		     ,@(when no-sense-words
 		       (let ((nsw (parse-comma-separated-list
 				      no-sense-words)))
@@ -294,6 +277,11 @@
   '(tell &key :sender texttagger :content (started-speaking . *))
   #'handle-started-speaking-from-texttagger
   :subscribe t)
+
+(defcomponent-handler
+  '(error &key :comment *)
+  #'handle-error-from-texttagger
+  :subscribe nil)
 
 ; TODO ?
 ;(defcomponent-handler

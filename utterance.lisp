@@ -27,11 +27,50 @@
   sentence-lfs
   )
 
+(defun ensure-original-tt-parameters ()
+  "Make sure we know the default TT options (i.e. that *original-tt-parameters*
+   is filled)."
+  (unless *original-tt-parameters*
+    (setf *original-tt-parameters*
+      (remove-arg
+	  (cdr (send-and-wait
+	      '(request :receiver TextTagger :content (get-parameters))))
+	  ;; get-parameters returns this, but it can't be set using
+	  ;; set-parameters, only init/fini
+          :init-taggers))
+    (let ((original-input-terms (send-and-wait
+	    '(request :receiver TextTagger :content (get-input-terms)))))
+      (when original-input-terms
+	(setf *original-tt-parameters* (nconc *original-tt-parameters*
+	      (list :input-terms original-input-terms)))))
+    ))
+
 (defun set-texttagger-options (opts)
-  (unless (equalp '(ok)
-	      (send-and-wait `(request :receiver TextTagger :content
-		  (set-parameters ,@(substitute :default-type :tag-type opts)))))
-    (format t "failed to set TextTagger options ~s~%" opts)))
+  (multiple-value-bind (params input-terms)
+      (remove-arg opts :input-terms)
+    (setf params (substitute :default-type :tag-type params))
+    (setf input-terms (car input-terms)) ; we know there's at most one :input-terms arg
+    (unless (equalp '(ok)
+		(send-and-wait `(request :receiver TextTagger :content
+		    (set-parameters ,@params))))
+      ;; FIXME should these be errors?
+      (format t "failed to set TextTagger options ~s~%" opts))
+    (unless (equalp '(ok)
+		(send-and-wait `(request :receiver TextTagger :content
+		    ,(if input-terms
+		       `(load-input-terms :input-terms ,input-terms)
+		       '(clear-input-terms)))))
+      (format t "failed to set TextTagger input-terms ~s~%" input-terms))
+    ))
+
+(defun reset-input-terms ()
+  (let ((input-terms (find-arg *original-tt-parameters* :input-terms)))
+    (unless (equalp '(ok)
+		(send-and-wait `(request :receiver TextTagger :content
+		    ,(if input-terms
+		       `(load-input-terms :input-terms ,input-terms)
+		       '(clear-input-terms)))))
+      (format t "failed to reset TextTagger input-terms ~s~%" input-terms))))
 
 ;; we can't just set this in defsys because that's loaded before system.lisp
 ;; sets the parser options; instead we wait until we get the first request, and
@@ -99,15 +138,7 @@
   ;; reset stuff throughout the system, including IM's utt record, which only
   ;; has room for 10,000 utterances
   (send-msg '(tell :content (start-conversation)))
-  ;; make sure we know the default TT options
-  (unless *original-tt-parameters*
-    (setf *original-tt-parameters*
-      (remove-arg
-	  (cdr (send-and-wait
-	      '(request :receiver TextTagger :content (get-parameters))))
-	  ;; get-parameters returns this, but it can't be set using
-	  ;; set-parameters, only init/fini
-          :init-taggers)))
+  (ensure-original-tt-parameters)
   ;; set TT options if they were given in the request
   (when (utterance-texttagger-options utt)
     (set-texttagger-options (utterance-texttagger-options utt)))
@@ -149,15 +180,7 @@
 
 ;; with DrumGUI
 (defun send-paragraph-to-drum-system (para)
-  ;; make sure we know the default TT options
-  (unless *original-tt-parameters*
-    (setf *original-tt-parameters*
-      (remove-arg
-	  (cdr (send-and-wait
-	      '(request :receiver TextTagger :content (get-parameters))))
-	  ;; get-parameters returns this, but it can't be set using
-	  ;; set-parameters, only init/fini
-          :init-taggers)))
+  (ensure-original-tt-parameters)
   (unwind-protect ; reset TT options even if we get an error
     (progn ; protected form
       ;; set TT options if they were given in the request
@@ -206,6 +229,8 @@
 		   ,@(substitute :type :tag-type
 		       (text-unit-texttagger-options text))
 		   )))))
+    (when (member (text-unit-texttagger-options text) :input-terms)
+      (reset-input-terms))
     ;; reply content should be a list of lists
     (unless (and (listp tt-reply) (every #'listp tt-reply))
       (error "Bad reply from TextTagger: ~s" tt-reply))
@@ -229,19 +254,28 @@
   (setf *original-standard-output* *standard-output*)
   (setf *standard-output* (make-string-output-stream))
   (setf (text-unit-debug-output-stream text) *standard-output*)
-  (ecase (text-unit-component text)
-    (parser
-      (etypecase text
-	(utterance (send-utterance-to-system text))
-	(paragraph
-	  (if (eq :drum trips::*trips-system*)
-	    (send-paragraph-to-drum-system text)
-	    (send-paragraph-to-system text)
-	    ))
-	))
-    (texttagger
-      (tag-text-using-texttagger text))
-    ))
+  (handler-bind
+      ;; If there's an error sending the text, remove it from the pending list
+      ;; and reset stdout to its original value, before indicating the error
+      ;; the way defcomponent would (usually by sending a sorry message).
+      ;; Then start on the next pending text, if any.
+      ((error
+        (lambda (err)
+	  (finish-text-unit-with-error text err)
+	  )))
+    (ecase (text-unit-component text)
+      (parser
+	(etypecase text
+	  (utterance (send-utterance-to-system text))
+	  (paragraph
+	    (if (eq :drum trips::*trips-system*)
+	      (send-paragraph-to-drum-system text)
+	      (send-paragraph-to-system text)
+	      ))
+	  ))
+      (texttagger
+	(tag-text-using-texttagger text))
+      )))
 
 (defun options-to-xml-attributes (text)
     (declare (type text-unit text))
@@ -250,6 +284,7 @@
   (let* (
 	 (tto (text-unit-texttagger-options text))
 	 (tt (util:find-arg tto :tag-type))
+	 (it (util:find-arg tto :input-terms))
 	 (nsw (util:find-arg tto :no-sense-words))
 	 (sofpp (util:find-arg tto :senses-only-for-penn-poss))
 	 (po (text-unit-parser-options text))
@@ -268,6 +303,8 @@
       ,@io
       ,@(when tt
 	 (list :tag-type (format nil "~(~s~)" tt)))
+      ,@(when it
+	 (list :input-terms (format nil "~s" it)))
       ,@(when nsw (list :no-sense-words (format nil "~(~{~a~^,~}~)" nsw)))
       ,@(when sofpp
 	(list :senses-only-for-penn-poss (format nil "~{~a~^,~}" sofpp)))
@@ -374,6 +411,18 @@
     (when *pending-text-units*
       (send-text-to-system (first *pending-text-units*)))
     ))
+
+(defun finish-text-unit-with-error (text err)
+    (declare (type text-unit text))
+  (pop *pending-text-units*)
+  (setf *standard-output* *original-standard-output*)
+  (dfc::indicate-error dfc:*component* err
+      ;; fake the relevant parts of the request message
+      (list :sender (text-unit-requester text)
+	    :reply-with (text-unit-reply-id text)))
+  (when *pending-text-units*
+    (send-text-to-system (first *pending-text-units*)))
+  )
 
 (defun find-utt-by-root (speech-acts root)
   "Given one of several varieties of collections of UTTs (including a single
@@ -578,6 +627,18 @@
 	      (text-unit-texttagger-output text)))
       )
     ))
+
+;; If we sent text to TextTagger as an utterance message, and there was an
+;; error, we get an error (not reject) message back
+(defun handle-error-from-texttagger (msg comment)
+  (when (and *pending-text-units*
+             (typep (first *pending-text-units*) 'utterance))
+    (finish-text-unit-with-error
+        (first *pending-text-units*)
+	(make-condition 'simple-error
+	    :format-control "TextTagger error: ~a"
+	    :format-arguments (list comment))
+	)))
 
 ;(defun handle-utterance-from-texttagger (msg args)
 ;  ; TODO ?

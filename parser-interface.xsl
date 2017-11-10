@@ -529,6 +529,8 @@
 	   <li>Please note that in this version of the web parser, even if you select one of the sentence- or clause- splitting taggers, the TRIPS Parser will still see the whole input as one "utterance" and may not decide to split it in the same way, or at all. If you want it to split the same way, use <a href="drum">the drum paragraph parser</a> instead.</li>
 	  </xsl:if>
 	 </ul>
+	<label>Input terms:<br/>
+	 <textarea name="input-terms" id="input-terms" placeholder="Enter a Lispy list of native tags without :start/:end."><xsl:value-of select="@input-terms" /></textarea></label><br/>
 	<label>Output sense information only for words with Penn POS tags: <input type="text" name="senses-only-for-penn-poss" id="senses-only-for-penn-poss" value="{@senses-only-for-penn-poss}" /></label> (enter a comma-separated list of tags, or use the <a href="javascript:toggleDisplay('senses-only-for-penn-poss-checkboxes')" title="Show/hide Penn POS checkboxes.">checkboxes</a>)
 	 <ul class="checkboxes" id="senses-only-for-penn-poss-checkboxes">
 	  <li><label><input type="checkbox" /> all noun tags</label>

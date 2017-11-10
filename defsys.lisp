@@ -30,6 +30,7 @@
 		      "tags-to-xml"
 		      "parse-to-xml"
 		      "utterance"
+		      "safe-reader"
 		      "messages"
 		    )))
 
