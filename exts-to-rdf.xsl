@@ -96,6 +96,9 @@ William de Beaumont
    <xsl:for-each select="member">
     <role:member rdf:resource="#{@id}" />
    </xsl:for-each>
+   <xsl:for-each select="except">
+    <role:except rdf:resource="#{@id}" />
+   </xsl:for-each>
   </rdf:Description>
  </role:aggregate>
 </xsl:template>
