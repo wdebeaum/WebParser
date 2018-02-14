@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="cvsId" content="$Id: api.html,v 1.24 2017/11/08 16:38:18 wdebeaum Exp $">
+<meta name="cvsId" content="$Id: api.html,v 1.27 2018/02/08 19:39:40 wdebeaum Exp $">
 <meta charset="UTF-8">
 <title>TRIPS Parser Web API Documentation</title>
 <style type="text/css">
@@ -215,6 +215,13 @@ tr.first th {
 <tr><td><code>number</code></td><td>The part of the name after "mir-".</td></tr>
 <tr><td><code>species</code></td><td>The name of the species, expanded from the abbreviation before "mir", if present.</td></tr>
 
+<!--
+This never actually gets out of TextTagger, since the tag only has domain-specific-info and not any other kind of sense info (no ONT type, no POS). This is kind of by design, since these tags are just used by the music tagger, and might interfere with other things were they let out to later stages.
+<tr class="first"><th rowspan="3"><code>&lt;roman-numeral&gt;</code></th><td class="spacer"></td><td>Roman numeral.</td></tr>
+<tr><td><code>case</code></td><td>The case of the letters used to spell the numeral, <code>upper</code> or <code>lower</code>.</td></tr>
+<tr><td><code>value</code></td><td>The value of the number (in conventional Arabic numerals).</td></tr>
+-->
+
 <tr class="first"><th rowspan="5"><code>&lt;pitch&gt;</code></th><td class="spacer"></td><td>Musical pitch.</td></tr>
 <tr><td><code>letter</code></td><td>The letter (A-G) identifying the basic pitch, independent of any key.</td></tr>
 <tr><td><code>scale-degree</code></td><td>The number (1-7) identifying the basic pitch relative to the key.</td></tr>
@@ -238,6 +245,31 @@ tr.first th {
 
 <tr class="first"><th rowspan="2"><code>&lt;pitch-sequence&gt;</code></th><td class="spacer"></td><td>Sequence of musical pitches. It's unspecified whether this is melody or harmony.</td></tr>
 <tr><td><code>&lt;members&gt;</code></td><td>Contains the <code>&lt;pitch&gt;</code>es in the sequence.</td></tr>
+
+<tr class="first"><th rowspan="4"><code>&lt;capital&gt;</code></th><td class="spacer"></td><td>Capital of a country.</td></tr>
+<tr><td><code>name</code></td><td>The name of the city.</td></tr>
+<tr><td><code>country</code></td><td>The (ISO-3166-1 alpha-2) code for the country this city is the capital of.</td></tr>
+<tr><td><code>&lt;match ... /&gt;</code></td><td>See the same element under <code>&lt;term&gt;</code> above.</td></tr>
+
+<tr class="first"><th rowspan="4"><code>&lt;country&gt;</code></th><td class="spacer"></td><td>Country.</td></tr>
+<tr><td><code>name</code></td><td>The official name of the country.</td></tr>
+<tr><td><code>code</code></td><td>The (ISO-3166-1 alpha-2) code for the country.</td></tr>
+<tr><td><code>&lt;match ... /&gt;</code></td><td>See the same element under <code>&lt;term&gt;</code> above.</td></tr>
+
+<tr class="first"><th rowspan="4"><code>&lt;demonym&gt;</code></th><td class="spacer"></td><td>Word describing the people of a country (or group of countries).</td></tr>
+<tr><td><code>name</code></td><td>The demonym.</td></tr>
+<tr><td><code>countries</code></td><td>The (ISO-3166-1 alpha-2) codes for the countries this demonym applies to.</td></tr>
+<tr><td><code>&lt;match ... /&gt;</code></td><td>See the same element under <code>&lt;term&gt;</code> above.</td></tr>
+
+<tr class="first"><th rowspan="4"><code>&lt;region&gt;</code></th><td class="spacer"></td><td>Region of the world containing some countries.</td></tr>
+<tr><td><code>name</code></td><td>The name of the region.</td></tr>
+<tr><td><code>countries</code></td><td>The (ISO-3166-1 alpha-2) codes for the countries contained in this region.</td></tr>
+<tr><td><code>&lt;match ... /&gt;</code></td><td>See the same element under <code>&lt;term&gt;</code> above.</td></tr>
+
+<tr class="first"><th rowspan="4"><code>&lt;subregion&gt;</code></th><td class="spacer"></td><td>Smaller region of the world containing some countries.</td></tr>
+<tr><td><code>name</code></td><td>The name of the subregion.</td></tr>
+<tr><td><code>countries</code></td><td>The (ISO-3166-1 alpha-2) codes for the countries contained in this subregion.</td></tr>
+<tr><td><code>&lt;match ... /&gt;</code></td><td>See the same element under <code>&lt;term&gt;</code> above.</td></tr>
 
 <!-- TODO umls, but we never get that in the web system -->
 </table>

@@ -3,6 +3,7 @@
 
 (defstruct text-unit
   text ; input text
+  service ; name of the web service (e.g. :DRUM, :DRUM-ER, :CWMSREADER...)
   component ; parser or texttagger
   interface-options ; extscontents, extsformat, tagsformat, treecontents, treeformat, lfformat, debug
   texttagger-options ; see ../TextTagger/docs/README.xhtml
@@ -229,7 +230,7 @@
 		   ,@(substitute :type :tag-type
 		       (text-unit-texttagger-options text))
 		   )))))
-    (when (member (text-unit-texttagger-options text) :input-terms)
+    (when (member :input-terms (text-unit-texttagger-options text))
       (reset-input-terms))
     ;; reply content should be a list of lists
     (unless (and (listp tt-reply) (every #'listp tt-reply))
@@ -243,7 +244,7 @@
       (setf *last-uttnum* (car (last (paragraph-uttnums text))))
       )
     (pop *pending-text-units*)
-    (finish-text-unit text nil)
+    (finish-text-unit text)
     )
   )
 
@@ -268,7 +269,8 @@
 	(etypecase text
 	  (utterance (send-utterance-to-system text))
 	  (paragraph
-	    (if (eq :drum trips::*trips-system*)
+	    (if (or (eq :drum trips::*trips-system*)
+		    (eq :cwmsreader (text-unit-service text)))
 	      (send-paragraph-to-drum-system text)
 	      (send-paragraph-to-system text)
 	      ))
@@ -299,6 +301,7 @@
       (setf io (nth-value 1 (util:remove-args io
           '(:stylesheet :tagsformat :debug)))))
     `(
+      :service ,(symbol-name (text-unit-service text))
       :component ,(text-unit-component text) ; not really an attribute, whatevs
       ,@io
       ,@(when tt
@@ -376,10 +379,60 @@
     (find-arg-in-act sa :uttnum)
     ))
 
-(defun finish-text-unit (text speech-act)
+(defun text-unit-finishable-p (text)
+    (declare (type text-unit text))
+  "Does finish-text-unit have a chance of succeeding, based on which messages
+   we've received so far? (Assumes component=parser)"
+  (and
+    ;; we have output from both TextTagger and Parser
+    (not (null (text-unit-texttagger-output text)))
+    (not (null (text-unit-parser-output text)))
+    ;; if we're doing a paragraph, we have the same number of TT utterances as
+    ;; parser output messages
+    (if (paragraph-p text)
+      (= (length (paragraph-texttagger-output text))
+         (length (paragraph-parser-output text)))
+      t)
+    ))
+
+(defun try-to-finish-text-unit (text)
+    (declare (type text-unit text))
+  "Call finish-text-unit if we think we already received all the relevant
+   messages; otherwise wait a bit for more messages and send a message to
+   ourself to try again."
+  (cond
+    ((text-unit-finishable-p text)
+      (finish-text-unit text))
+    (t
+      (push text *pending-text-units*)
+      (sleep 1)
+      (send-msg '(request :receiver webparser :content (retry-finishing)))
+      )
+    ))
+
+(defun handle-retry-finishing (msg args)
+    (declare (ignore msg args))
+  (let ((text (pop *pending-text-units*)))
+    (if (text-unit-finishable-p text)
+      (finish-text-unit text)
+      (finish-text-unit-with-error
+          text
+	  (make-condition 'simple-error :format-control
+	    "WebParser didn't get enough output messages to finish its output.")
+	  )
+      )))
+
+(defun finish-text-unit (text)
     (declare (type text-unit text))
   (reset-parser-options)
-  (let ((s (make-string-output-stream)))
+  (when (paragraph-p text)
+    (handler-case (apply-sentence-lfs text) ; NOTE: does nothing w/o sentence-lfs
+      (error (e) (warn "apply-sentence-lfs failed: ~a" e))))
+  (let ((speech-act (text-unit-parser-output text))
+        (s (make-string-output-stream)))
+    (when (paragraph-p text)
+      ;; undo reversing effect of pushing each utt's act into the output list
+      (setf speech-act (reverse speech-act)))
     ;; stop capturing debug output
     (setf *standard-output* *original-standard-output*)
     (parse-to-xml-stream
@@ -464,7 +517,7 @@
       (error "sentence-lfs missing :content"))
     (unless text
       (warn "received sentence-lfs with no text-units pending~%"))
-    (when (typep text 'paragraph)
+    (when (paragraph-p text)
       ;; save the message for later; if we try to copy the :corefs over to
       ;; parser-output now, we risk a race condition between Parser and IM
       ;; outputs (we're not guaranteed to get them in an order that makes sense
@@ -529,32 +582,23 @@
       )))
 
 (defun handle-paragraph-completed (msg args)
-    (declare (ignore msg args)) ; TODO check whether :id matches start-paragraph/end-paragraph's
-  (unless (eq :step trips::*trips-system*) ; need to wait for IM in STEP
-    (let ((para (pop *pending-text-units*)))
-      (etypecase para
-	(paragraph
-	  (finish-text-unit para (reverse (paragraph-parser-output para))))
-	(utterance
-	  (error "received unexpected paragraph-completed message when the first pending text-unit was an utterance, not a paragraph"))
-	(null
-	  (warn "got paragraph-completed with no pending text-units"))
-	))))
-
-(defun handle-paragraph-done (msg args)
-    (declare (ignore msg args)) ; TODO check whether :id matches start-paragraph/end-paragraph's
-  (when (eq :step trips::*trips-system*) ; handled earlier in other sys
-    (let ((para (pop *pending-text-units*)))
-      (etypecase para
-	(paragraph
-	  (handler-case (apply-sentence-lfs para)
-	    (error (e) (warn "apply-sentence-lfs failed: ~a" e)))
-	  (finish-text-unit para (reverse (paragraph-parser-output para))))
-	(utterance
-	  (error "received unexpected paragraph-done message when the first pending text-unit was an utterance, not a paragraph"))
-	(null
-	  (warn "got paragraph-done with no pending text-units"))
-	))))
+    (declare (ignore args)) ; TODO check whether :id matches start-paragraph/end-paragraph's
+  ;; need to wait for IM's paragraph-done in STEP so that we can apply
+  ;; sentence-lfs to get corefs, but other paragraph systems can finish
+  ;; earlier, with Parser's paragraph-completed. (DRUM doesn't count because it
+  ;; goes through DrumGUI anyway, so we wait for its reply)
+  (let ((verb (car (find-arg-in-act msg :content)))
+        (step-p (eq :step trips::*trips-system*)))
+    (when (eq verb (if step-p 'paragraph-done 'paragraph-completed))
+      (let ((para (pop *pending-text-units*)))
+	(etypecase para
+	  (paragraph
+	    (try-to-finish-text-unit para))
+	  (utterance
+	    (error "received unexpected paragraph-completed message when the first pending text-unit was an utterance, not a paragraph"))
+	  (null
+	    (warn "got paragraph-completed with no pending text-units"))
+	  )))))
 
 (defun handle-turn-done (msg args)
     (declare (ignore args))
@@ -564,7 +608,7 @@
         nil) ; ignore
       (utterance
         (pop *pending-text-units*)
-	(finish-text-unit utt (utterance-parser-output utt))
+	(try-to-finish-text-unit utt)
 	)
       (null
         (warn "got ~s with no pending text-units"
@@ -631,8 +675,7 @@
 ;; If we sent text to TextTagger as an utterance message, and there was an
 ;; error, we get an error (not reject) message back
 (defun handle-error-from-texttagger (msg comment)
-  (when (and *pending-text-units*
-             (typep (first *pending-text-units*) 'utterance))
+  (when (and *pending-text-units* (utterance-p (first *pending-text-units*)))
     (finish-text-unit-with-error
         (first *pending-text-units*)
 	(make-condition 'simple-error

@@ -131,6 +131,7 @@
 			  ) query
 	(let* ((slots `(
 		 :text ,input
+		 :service ,(intern (string-upcase uri-basename) :keyword)
 		 :component ,(if (string-equal "texttagger" component)
 			       'texttagger 'parser)
 		 :interface-options (
@@ -199,7 +200,8 @@
 		 :reply-id ,(find-arg-in-act msg :reply-with)
 		 )))
 	  (receive-text-from-user
-	      (apply (if (member trips::*trips-system* '(:drum :step))
+	      (apply (if (or (member trips::*trips-system* '(:drum :step))
+			     (string= uri-basename "cwmsreader"))
 		       #'make-paragraph #'make-utterance)
 		     slots))
 	  )))))
@@ -220,7 +222,7 @@
 
 (defcomponent-handler
   '(tell &key :content (paragraph-done . *))
-  #'handle-paragraph-done
+  #'handle-paragraph-completed
   :subscribe t)
 
 (defcomponent-handler
@@ -288,4 +290,11 @@
 ;  '(tell &key :sender texttagger :content (utterance . *))
 ;  #'handle-utterance-from-texttagger
 ;  :subscribe t)
+
+;;; From WebParser (that's us!)
+
+(defcomponent-handler
+  '(request &key :content (retry-finishing . *))
+  #'handle-retry-finishing
+  :subscribe nil)
 

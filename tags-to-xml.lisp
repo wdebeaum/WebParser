@@ -65,6 +65,10 @@
     :sources (list-of symbol)
     )
   ;; Musica
+  (roman-numeral
+    :case symbol
+    :value integer
+    )
   (pitch
     :letter symbol
     :scale-degree integer
@@ -89,6 +93,27 @@
   (pitch-sequence
     :members (list-of dsi)
     )
+  ;; CWMS
+  (capital
+    :name string
+    :country symbol
+    :matches matches)
+  (country
+    :name string
+    :code symbol
+    :matches matches)
+  (demonym
+    :name string
+    :countries (list-of symbol)
+    :matches matches)
+  (region
+    :name string
+    :countries (list-of symbol)
+    :matches matches)
+  (subregion
+    :name string
+    :countries (list-of symbol)
+    :matches matches)
   )
   "An assoc list from domain-specific-info types to keyword-argument lists
    mapping their arguments to the arguments' types. This also provides the

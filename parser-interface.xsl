@@ -381,7 +381,7 @@
    <xsl:text>TRIPS</xsl:text>
    <xsl:if test="@system and not(@system = 'WEB-TOOLS' or @system = 'NIL')">
     <xsl:text>/</xsl:text>
-    <xsl:value-of select="@system" />
+    <xsl:value-of select="@service" />
    </xsl:if>
    <xsl:text> </xsl:text>
    <xsl:choose>
@@ -410,7 +410,7 @@
      </xsl:if>
      <div>
       <xsl:choose>
-       <xsl:when test="@system = 'STEP'">
+       <xsl:when test="@system = 'STEP' or @service = 'CWMSREADER'">
         <textarea name="input" placeholder="Enter a paragraph." cols="80" rows="20" maxlength="5000"><xsl:value-of select="@input" /></textarea><br />
        </xsl:when>
        <xsl:otherwise>
@@ -458,6 +458,9 @@
 	  <xsl:if test="@system = 'WEB-TOOLS' or @system = 'DRUM' or @system = 'BOB'">
 	   <li title="Looks up biological mechanism terms for the Deep Reader for Understanding Mechanisms (DRUM)."><label><input type="checkbox" /> drum</label></li>
 	  </xsl:if>
+	  <xsl:if test="@system = 'WEB-TOOLS' or @system = 'CWMS'">
+	   <li title="Looks up country names and related terms from mledoze/countries' countries.json file."><label><input type="checkbox" /> countries</label></li>
+	  </xsl:if>
 	  <xsl:if test="@system = 'WEB-TOOLS' or @system = 'DRUM'">
 	   <li title="Uses the Enju parser (with the GENIA model) to parse sentences, and converts the resulting parses to clause, phrase, and POS tags."><label><input type="checkbox" /> enju</label> (all)
 	    <ul class="checkboxes">
@@ -485,6 +488,7 @@
 	  <li title="Tags certain (often abbreviated) phrases occurring in prescriptions as either adjectives or adverbs."><label><input type="checkbox" /> prescriptions</label></li>
 	  <li title="Tags each punctuation character."><label><input type="checkbox" /> punctuation</label></li>
 	  <li title="Tags double-quoted strings."><label><input type="checkbox" /> quotations</label></li>
+	  <li title="Tags roman numerals as numbers."><label><input type="checkbox" /> roman-numerals</label></li>
 	  <li title="Uses the Lingua::EN::Sentence Perl module to split the string into sentences."><label><input type="checkbox" /> sentences</label></li>
 	  <li title="Splits the string on sequences of whitespace longer than one character."><label><input type="checkbox" /> spaced_chunks</label></li>
 	  <xsl:if test="@system = 'WEB-TOOLS' or @system = 'DRUM' or @system = 'BOB'">
@@ -523,6 +527,7 @@
 	  <xsl:if test="@system != 'CABOT'">
 	   <li title="Tags any substring that matches a name in the GNIS database as a named-entity with type ONT::geographic-region."><label><input type="checkbox" /> terms</label> (geographic names)</li>
 	  </xsl:if>
+	  <li title="Tags non-first variants in slash- or ampersand-separated lists of variants like &quot;Smad1/5/8&quot; as alternate spellings that include the prefix, like &quot;5&quot; -> &quot;Smad5&quot; and &quot;8&quot; -> &quot;Smad8&quot;. The Words tagger should already get the first one, &quot;Smad1&quot;."><label><input type="checkbox" /> variant-lists</label></li>
 	  <li title="Tags multi-word lexical items from WordNet with their sense key, part of speech, and morphology."><label><input type="checkbox" /> word_net</label></li>
 	  <li title="Tags anything that the Parser might want to consider a separate word. That includes splitting CamelCase and contractions, among other things."><label><input type="checkbox" /> words</label> (highly recommended!)</li>
 	  <xsl:if test="@system != 'STEP'">
