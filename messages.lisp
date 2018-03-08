@@ -106,14 +106,15 @@
   (destructuring-bind (request-method request-uri &key query) args
       (declare (ignore request-method))
     (let* ((slash-pos (position #\/ request-uri :from-end t))
-           (uri-basename (if slash-pos (subseq request-uri (1+ slash-pos)) request-uri)))
+           (uri-basename (if slash-pos (subseq request-uri (1+ slash-pos)) request-uri))
+	   (do-inference (member uri-basename '("drum-er" "cwmsreader") :test #'string=)))
       (when (string= uri-basename "get-word-def")
         (return-from handle-http-request (handle-get-word-def msg query)))
 ;      (unless (member uri-basename '("parse" "drum") :test #'string=)
 ;	(error "bogus request uri: ~s" request-uri))
       (destructuring-bind ( &key input
       			    (component "parser")
-			    (extscontents "raw")
+			    (extscontents (if (string= uri-basename "cwmsreader") "inf" "raw"))
 			    (extsformat "svg")
 			    tagsformat
 			    (treecontents "phrase")
@@ -138,7 +139,7 @@
 		   :stylesheet
 		     ,(if (eq :drum trips::*trips-system*)
 			"drum-interface.xsl" "parser-interface.xsl")
-		   ,@(when (string= uri-basename "drum-er")
+		   ,@(when do-inference
 		     `(:extscontents ,extscontents))
 		   :extsformat ,extsformat
 		   :tagsformat
@@ -193,7 +194,7 @@
 				    (format nil *rule-set-path-format* rule-set)
 				    ))
 		       `(:rule-set ,rule-set))
-		     ,@(when (string= uri-basename "drum-er")
+		     ,@(when do-inference
 		       '(:do-inference t))
 		   )
 		 :requester ,(find-arg-in-act msg :sender)

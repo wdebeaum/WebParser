@@ -193,9 +193,9 @@
       (let* ((do-inference (find-arg (paragraph-extraction-options para) :do-inference))
              (dg-reply
 	       (send-and-wait `(request :receiver drum :content
-		   (load-text :text ,(paragraph-text para)
-			      ,@(when do-inference
-				'(:do-inference true)))))))
+		   (run-text :text ,(paragraph-text para)
+			     ,@(when do-inference
+				 '(:do-inference true)))))))
 	(unless (eq 'result (car dg-reply))
 	  (error "Bad reply from DrumGUI: ~s" dg-reply))
 	(setf (paragraph-uttnums para) (find-arg-in-act dg-reply :uttnums))
