@@ -107,6 +107,8 @@
       (declare (ignore request-method))
     (let* ((slash-pos (position #\/ request-uri :from-end t))
            (uri-basename (if slash-pos (subseq request-uri (1+ slash-pos)) request-uri))
+	   (make-paragraph-p (or (member trips::*trips-system* '(:drum :step))
+				 (string= uri-basename "cwmsreader")))
 	   (do-inference (member uri-basename '("drum-er" "cwmsreader") :test #'string=)))
       (when (string= uri-basename "get-word-def")
         (return-from handle-http-request (handle-get-word-def msg query)))
@@ -125,6 +127,7 @@
 			    input-terms
 			    no-sense-words
 			    senses-only-for-penn-poss
+			    (split-mode "split-clauses")
 			    semantic-skeleton-scoring
 			    trace-level
 			    rule-set
@@ -169,6 +172,12 @@
 			 (when sofpp
 			   (list :senses-only-for-penn-poss sofpp))))
 		   )
+		 ,@(when (and make-paragraph-p
+			      (member split-mode
+				      '("split-clauses" "split-sentences")
+				      :test #'string-equal))
+		   (list :split-mode
+			 (intern (string-upcase split-mode) :keyword)))
 		 :parser-options
 		   ,(when (eq :step trips::*trips-system*)
 		     `((parser::*semantic-skeleton-scoring-enabled*
@@ -201,9 +210,7 @@
 		 :reply-id ,(find-arg-in-act msg :reply-with)
 		 )))
 	  (receive-text-from-user
-	      (apply (if (or (member trips::*trips-system* '(:drum :step))
-			     (string= uri-basename "cwmsreader"))
-		       #'make-paragraph #'make-utterance)
+	      (apply (if make-paragraph-p #'make-paragraph #'make-utterance)
 		     slots))
 	  )))))
 

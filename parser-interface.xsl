@@ -536,7 +536,7 @@
 	 </ul>
 	<label>Input terms:<br/>
 	 <textarea name="input-terms" id="input-terms" placeholder="Enter a Lispy list of native tags without :start/:end."><xsl:value-of select="@input-terms" /></textarea></label><br/>
-	<label>Output sense information only for words with Penn POS tags: <input type="text" name="senses-only-for-penn-poss" id="senses-only-for-penn-poss" value="{@senses-only-for-penn-poss}" /></label> (enter a comma-separated list of tags, or use the <a href="javascript:toggleDisplay('senses-only-for-penn-poss-checkboxes')" title="Show/hide Penn POS checkboxes.">checkboxes</a>)
+	<label>Output sense information only for words with Penn POS tags: <input type="text" name="senses-only-for-penn-poss" id="senses-only-for-penn-poss" value="{@senses-only-for-penn-poss}" /></label> (enter a comma-separated list of tags, or use the <a href="javascript:toggleDisplay('senses-only-for-penn-poss-checkboxes')" title="Show/hide Penn POS checkboxes.">checkboxes</a>)<br />
 	 <ul class="checkboxes" id="senses-only-for-penn-poss-checkboxes">
 	  <li><label><input type="checkbox" /> all noun tags</label>
 	   <ul class="checkboxes">
@@ -596,6 +596,22 @@
 	   (note that . , ; `` '' are omitted for technical reasons, but they don't usually have sense tags in the first place)
 	  </li>
 	 </ul>
+        <xsl:if test="@system = 'STEP' or @system = 'DRUM' or @service = 'CWMSREADER'">
+	 <label title="Select how finely TextTagger splits the paragraph into utterances; 'split sentences' only splits on sentence breaks, while 'split clauses' additionally splits on commas and certain other punctuation if the resulting clauses are long enough. Note that the Parser may further split the utterances it gets from TextTagger into smaller fragments, regardless of this setting.">Split mode: <select name="split-mode" id="split-mode">
+	  <option value="split-clauses">
+	   <xsl:if test="@split-mode = 'split-clauses'">
+	    <xsl:attribute name="selected">selected</xsl:attribute>
+	   </xsl:if>
+	   <xsl:text>split clauses</xsl:text>
+	  </option>
+	  <option value="split-sentences">
+	   <xsl:if test="@split-mode = 'split-sentences'">
+	    <xsl:attribute name="selected">selected</xsl:attribute>
+	   </xsl:if>
+	   <xsl:text>split sentences</xsl:text>
+	  </option>
+	 </select></label>
+        </xsl:if>
        </div>
       </xsl:if>
       <xsl:if test="/trips-parser-output">

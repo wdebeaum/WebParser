@@ -187,6 +187,10 @@
       ;; set TT options if they were given in the request
       (when (paragraph-texttagger-options para)
 	(set-texttagger-options (paragraph-texttagger-options para)))
+      ;; this one goes through DrumGUI because it needs to be in the tag request
+      (unless (eq :split-clauses (paragraph-split-mode para))
+        (send-msg '(request :receiver drum :content
+	    (set-tag-options :split-clauses nil :split-sentences t))))
       ;; ditto parser/extraction options
       (set-parser-options (paragraph-parser-options para))
       (set-extraction-options (paragraph-extraction-options para))
@@ -214,6 +218,13 @@
       (reset-parser-options))
     (when (paragraph-texttagger-options para)
       (set-texttagger-options *original-tt-parameters*))
+    (unless (eq :split-clauses (paragraph-split-mode para))
+      (send-msg '(request :receiver drum :content
+	  ;; FIXME DrumGUI doesn't let us ask it what the tag options were to
+	  ;; begin with, so we have to just assume the default tag options (at
+	  ;; time of writing these were the defaults in the only systems that
+	  ;; use DrumGUI, drum and cwmsreader)
+          (set-tag-options :split-clauses t :split-sentences t))))
     )
   )
 
@@ -289,6 +300,7 @@
 	 (it (util:find-arg tto :input-terms))
 	 (nsw (util:find-arg tto :no-sense-words))
 	 (sofpp (util:find-arg tto :senses-only-for-penn-poss))
+	 (sm (when (paragraph-p text) (paragraph-split-mode text)))
 	 (po (text-unit-parser-options text))
 	 (sss-pair (assoc 'parser::*semantic-skeleton-scoring-enabled* po))
 	 (eo (text-unit-extraction-options text))
@@ -311,6 +323,8 @@
       ,@(when nsw (list :no-sense-words (format nil "~(~{~a~^,~}~)" nsw)))
       ,@(when sofpp
 	(list :senses-only-for-penn-poss (format nil "~{~a~^,~}" sofpp)))
+      ,@(when sm
+        (list :split-mode (format nil "~(~a~)" sm)))
       ,@(when sss-pair
 	(list :semantic-skeleton-scoring
 	      (when (second sss-pair) (format nil "~a" (second sss-pair)))))

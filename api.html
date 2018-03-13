@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="cvsId" content="$Id: api.html,v 1.27 2018/02/08 19:39:40 wdebeaum Exp $">
+<meta name="cvsId" content="$Id: api.html,v 1.28 2018/03/13 18:44:20 wdebeaum Exp $">
 <meta charset="UTF-8">
 <title>TRIPS Parser Web API Documentation</title>
 <style type="text/css">
@@ -37,14 +37,14 @@ tr.first th {
 <p>This URL:</p>
 <blockquote><a href="http://trips.ihmc.us/parser/cgi/parse?input=this+is+an+example"><code>http://trips.ihmc.us/parser/cgi/parse?input=this+is+an+example</code></a></blockquote>
 <p>Will cause the TRIPS Parser to parse the string "this is an example" with its default options. It will send back an XML document with lots of different information (see "Output Format" below). Which parts of the output you use may depend on your application.</p>
-<p>There are different instances of the TRIPS parser with different default settings. The one above, <code>parse</code>, is a generic one. As of this writing we also have <code>cabot</code> for blocks world, <code>drum</code> for Deep Reading for Understanding [biomolecular] Mechanisms, and <code>step</code> for the generic paragraph parser from the STEP 2008 shared task. <code>cabot</code> has the same browser interface as <code>parse</code>, but <code>drum</code> and <code>step</code> are slightly different in that they are meant to take a paragraph as input instead of a single sentence, so they have a multiline <code>&lt;textarea&gt;</code> instead of a single-line <code>&lt;input type="text"&gt;</code>. <code>drum</code> also omits the TextTagger options for simplicity.</p>
+<p>There are different instances of the TRIPS parser with different default settings. See the <a href="http://trips.ihmc.us/parser/">index</a> for a full list. The one above, <code>parse</code>, is a generic one. Most have the same browser interface as <code>parse</code>, but <code>step</code>, <code>drum</code>, and <code>cwmsreader</code> are slightly different in that they are meant to take a paragraph as input instead of a single sentence, so they have a multiline <code>&lt;textarea&gt;</code> instead of a single-line <code>&lt;input type="text"&gt;</code>. <code>drum</code> also omits most of the TextTagger options for simplicity.</p>
 <p>For example, this URL:</p>
 <blockquote><a href="http://trips.ihmc.us/parser/cgi/drum?input=The+oncogenes+are+KRAS%2C+PIK3CA%2C+and+BRAF."><code>http://trips.ihmc.us/parser/cgi/drum?input=The+oncogenes+are+KRAS%2C+PIK3CA%2C+and+BRAF.</code></a></blockquote>
 <p>will parse the string "The oncogenes are KRAS, PIK3CA, and BRAF." using settings from the DRUM system.</p>
 <p>For longer inputs, you should use the POST request method instead of GET, so that the URL doesn't get too long.</p>
 
 <h2>URL</h2>
-<p>The URL for the web API is the same as for the website: <a href="http://trips.ihmc.us/parser/cgi/parse"><code>http://trips.ihmc.us/parser/cgi/parse</code></a> (change the word after the last slash for parsers from other TRIPS systems: <a href="http://trips.ihmc.us/parser/cgi/cabot"><code>cabot</code></a>, <a href="http://trips.ihmc.us/parser/cgi/drum"><code>drum</code></a>, and <a href="http://trips.ihmc.us/parser/cgi/step"><code>step</code></a>). You can use either the <code>GET</code> or the <code>POST</code> HTTP request methods, either will work. The form displayed on the <code>parse</code> and <code>cabot</code> websites use <code>GET</code>, but the <code>drum</code> and <code>step</code> websites use <code>POST</code> to allow longer input texts. The <code>drum</code> version of the site also provides extractions (terms, events, etc.), in addition to the <code>parse</code> version's output of words, tags, parse trees, and logical forms.</p>
+<p>The URL for the web API is the same as for the website: <a href="http://trips.ihmc.us/parser/cgi/parse"><code>http://trips.ihmc.us/parser/cgi/parse</code></a> (change the word after the last slash for parsers from other TRIPS systems, e.g. <a href="http://trips.ihmc.us/parser/cgi/cabot"><code>cabot</code></a>). You can use either the <code>GET</code> or the <code>POST</code> HTTP request methods, either will work. The form displayed on the single-sentence parsing websites use <code>GET</code>, but the paragraph parsing websites use <code>POST</code> to allow longer input texts. The <code>drum</code> and <code>cwmsreader</code> versions of the site also provide extractions (terms, events, etc.), in addition to the other versions' output of words, tags, parse trees, and logical forms.</p>
 
 <h2>Query Parameters</h2>
 <p>All parameters are optional. If you omit <code>input</code>, you'll get a response with no <code>&lt;utt&gt;</code>s in it.</p>
@@ -65,6 +65,8 @@ tr.first th {
 <dd>Comma-separated list of words for which TextTagger will avoid outputting sense information (leaving it up to TRIPS' own lexicon).
 <dt><code>senses-only-for-penn-poss</code>
 <dd>Comma-separated list of <a href="http://www.cis.upenn.edu/~treebank/">Penn Treebank</a> part of speech tags for which TextTagger will output sense information (the default is to output sense information for all parts of speech).
+<dt><code>split-mode</code> (paragraph parsing only)
+<dd>Select how finely TextTagger splits the paragraph into utterances; <code>split-sentences</code> only splits on sentence breaks, while <code>split-clauses</code> (the default) additionally splits on commas and certain other punctuation if the resulting clauses are long enough. Note that the Parser may further split the utterances it gets from TextTagger into smaller fragments, regardless of this setting.
 <dt><code>semantic-skeleton-scoring</code> (<code>step</code> only)
 <dd>If this parameter is present, use the SkeletonScorer module to guide parsing using our corpus of hand-annotated semantic skeletons. This is on by default when using the <code>step</code> web parser in a web browser, but if you're using this API programmatically you need to give this parameter explicitly if you want to use this feature (this is due to how checkboxes work in web forms).
 <dt><code>component</code>
@@ -117,7 +119,7 @@ tr.first th {
   ...
 &lt;/trips-parser-output&gt;
 </pre></blockquote>
-<p>Some of the XML elements used above are described below. <a href="trips-parser-output.dtd">The DTD</a> has a more complete list of the elements and attributes that can be used.</p>
+<p>Some of the XML elements used above are described below. The <a href="trips-parser-output.dtd">DTD</a> has a more complete list of the elements and attributes that can be used.</p>
 
 <h3><code>&lt;trips-parser-output&gt;</code></h3>
 <p>The root element of the XML document is <code>&lt;trips-parser-output&gt;</code>. Its attributes are the query parameters used to generate the response, along with <code>parser-build-date</code>, containing the date and time that the system that generated the document was built. Its children are <code>&lt;debug&gt;</code> (containing information that might be useful for debugging the TRIPS Parser), <code>&lt;ekb&gt;</code> (containing extractions, only in DRUM version), and either a single <code>&lt;utt&gt;</code> or a <code>&lt;compound-communication-act&gt;</code> containing multiple <code>&lt;utt&gt;</code>s. The output of the paragraph parsers (<code>drum</code> and <code>step</code>) may contain multiple top-level <code>&lt;utt&gt;</code>s/<code>&lt;compound-communication-act&gt;</code>s. Each <code>&lt;utt&gt;</code> represents a fully-parsed sentence ("utterance") or fragment, and its contents are described below. The <code>&lt;ekb&gt;</code> applies to the input as a whole, so it's outside any of the <code>&lt;utt&gt;</code>s. Its contents are described later in this document.</p>
