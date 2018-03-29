@@ -179,6 +179,30 @@
     )
   )
 
+(defun slurp-file (filename)
+  "Read the entire contents of a file into a string and return it."
+  (with-open-file (f filename :direction :input)
+    (let ((ret (make-string (file-length f))))
+      (read-sequence ret f)
+      ret)))
+
+(defun remove-processing-instructions (xml-string)
+  "Remove processing instructions (in <?...?>, including the xml declaration)
+   from the beginning of an XML string, so that it may be included as part of a
+   larger XML file."
+  ;; iterate over PIs and whitespace until we get something that's neither
+  (loop with start = 0
+        while (string= "<?" (subseq xml-string start (+ 2 start)))
+	do (incf start 2)
+	   (setf start (search "?>" xml-string :start2 start))
+	   (unless start (error "unterminated processing instruction"))
+	   (incf start 2)
+	   (setf start
+		 (position-if-not #'whitespace-char-p xml-string :start start))
+	   (unless start (error "nothing following processing instructions"))
+	finally (return (subseq xml-string start))
+	))
+
 ;; with DrumGUI
 (defun send-paragraph-to-drum-system (para)
   (ensure-original-tt-parameters)
@@ -199,15 +223,19 @@
 	       (send-and-wait `(request :receiver drum :content
 		   (run-text :text ,(paragraph-text para)
 			     ,@(when do-inference
-				 '(:do-inference true)))))))
+				 '(:do-inference true :reply-with-ekb nil)))))))
 	(unless (eq 'result (car dg-reply))
 	  (error "Bad reply from DrumGUI: ~s" dg-reply))
 	(setf (paragraph-uttnums para) (find-arg-in-act dg-reply :uttnums))
-	(setf (paragraph-extractions para) (find-arg-in-act dg-reply :extractions))
-	(let ((inf-ekb (find-arg-in-act dg-reply :inferred-ekb)))
-	  (when inf-ekb
+	(setf (paragraph-extractions para)
+	      (remove-processing-instructions
+		  (slurp-file (find-arg-in-act dg-reply :ekb-file))))
+	(let ((inf-ekb-file (find-arg-in-act dg-reply :inferred-ekb-file)))
+	  (when (stringp inf-ekb-file)
 	    (setf (paragraph-extractions para)
-		  (concatenate 'string (paragraph-extractions para) inf-ekb))))
+		  (concatenate 'string (paragraph-extractions para)
+		      (remove-processing-instructions (slurp-file inf-ekb-file))
+		      ))))
 	(setf *last-uttnum* (car (last (paragraph-uttnums para))))
 	)
       )

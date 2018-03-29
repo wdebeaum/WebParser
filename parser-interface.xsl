@@ -405,7 +405,7 @@
      <p>Error: <xsl:value-of select="@error" /></p>
     </xsl:if>
     <form action="#">
-     <xsl:if test="@system = 'STEP'">
+     <xsl:if test="@system = 'STEP' or @service = 'CWMSREADER'">
       <xsl:attribute name="method">POST</xsl:attribute>
      </xsl:if>
      <div>
