@@ -222,14 +222,17 @@
              (dg-reply
 	       (send-and-wait `(request :receiver drum :content
 		   (run-text :text ,(paragraph-text para)
+			     :reply-with-ekb nil
 			     ,@(when do-inference
-				 '(:do-inference true :reply-with-ekb nil)))))))
+				 '(:do-inference true)))))))
 	(unless (eq 'result (car dg-reply))
 	  (error "Bad reply from DrumGUI: ~s" dg-reply))
 	(setf (paragraph-uttnums para) (find-arg-in-act dg-reply :uttnums))
-	(setf (paragraph-extractions para)
-	      (remove-processing-instructions
-		  (slurp-file (find-arg-in-act dg-reply :ekb-file))))
+	(let ((ekb-file (find-arg-in-act dg-reply :ekb-file)))
+	  (setf (paragraph-extractions para)
+		(if (stringp ekb-file)
+		  (remove-processing-instructions (slurp-file ekb-file))
+		  "")))
 	(let ((inf-ekb-file (find-arg-in-act dg-reply :inferred-ekb-file)))
 	  (when (stringp inf-ekb-file)
 	    (setf (paragraph-extractions para)
