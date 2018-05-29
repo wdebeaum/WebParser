@@ -289,7 +289,7 @@
   :subscribe t)
 
 (defcomponent-handler
-  '(error &key :comment *)
+  '(error &key :comment * :sender TextTagger)
   #'handle-error-from-texttagger
   :subscribe nil)
 
