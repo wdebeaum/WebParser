@@ -138,7 +138,7 @@
   (setf (utterance-num utt) *last-uttnum*)
   ;; reset stuff throughout the system, including IM's utt record, which only
   ;; has room for 10,000 utterances
-  (send-msg '(tell :content (start-conversation)))
+  (send-msg '(broadcast :content (tell :content (start-conversation))))
   (ensure-original-tt-parameters)
   ;; set TT options if they were given in the request
   (when (utterance-texttagger-options utt)
@@ -160,7 +160,7 @@
 
 ;; without DrumGUI, just sending directly to TextTagger
 (defun send-paragraph-to-system (para)
-  (send-msg '(tell :content (start-conversation)))
+  (send-msg '(broadcast :content (tell :content (start-conversation))))
   (set-parser-options (paragraph-parser-options para))
   (set-extraction-options (paragraph-extraction-options para))
   (let ((tt-reply
@@ -260,7 +260,7 @@
   )
 
 (defun tag-text-using-texttagger (text)
-  (send-msg '(tell :content (start-conversation)))
+  (send-msg '(broadcast :content (tell :content (start-conversation))))
   (let ((tt-reply
 	  (send-and-wait `(request :receiver texttagger :content
 	      (tag :text ,(text-unit-text text)
