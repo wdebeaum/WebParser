@@ -182,9 +182,17 @@
 (defun slurp-file (filename)
   "Read the entire contents of a file into a string and return it."
   (with-open-file (f filename :direction :input)
+    ;; NOTE: file-length returns the length in *bytes*, but string lengths and
+    ;; reads are in terms of *characters* which may be more than one byte. So
+    ;; we allocate a string with enough characters that all will fit even if
+    ;; all characters are bytes, but then we use the (character) position
+    ;; returned by read-sequence to take only the substring that we actually
+    ;; read into. Another solution to this problem would be to explicitly make
+    ;; a byte sequence and read into that, but then code that expects strings
+    ;; elsewhere would have to change, and we'd lose some checks for invalid
+    ;; characters.
     (let ((ret (make-string (file-length f))))
-      (read-sequence ret f)
-      ret)))
+      (subseq ret 0 (read-sequence ret f)))))
 
 (defun remove-processing-instructions (xml-string)
   "Remove processing instructions (in <?...?>, including the xml declaration)
