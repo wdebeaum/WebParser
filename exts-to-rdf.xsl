@@ -122,7 +122,7 @@ William de Beaumont
     </xsl:attribute>
    </xsl:when>
    <!-- don't make full nodes for these, just use type|@type -->
-   <xsl:when test="self::ptm | self::coref">
+   <xsl:when test="self::ptm | self::coref | self::scale">
     <xsl:for-each select="type | @type">
      <xsl:call-template name="strip-ont-prefix" />
     </xsl:for-each>
@@ -142,7 +142,7 @@ William de Beaumont
  </xsl:element>
 </xsl:template>
 
-<xsl:template match="mods" mode="exts-to-rdf">
+<xsl:template match="mods | qualifiers" mode="exts-to-rdf">
  <xsl:for-each select="*">
   <xsl:call-template name="rdf-leaf-node" />
  </xsl:for-each>
@@ -158,7 +158,7 @@ William de Beaumont
  <role:location rdf:ID="{generate-id()}" rdf:resource="#{@id}" />
 </xsl:template>
 
-<xsl:template match="cell-line | epistemic-modality | location | from-location | to-location | coref | assoc-with | ptm | bound-to | equals" mode="exts-to-rdf">
+<xsl:template match="cell-line | epistemic-modality | location | from-location | to-location | coref | assoc-with | ptm | bound-to | equals | size | scale" mode="exts-to-rdf">
  <!-- NOTE: most of these always have @id, so they always take the first branch of rdf-leaf-node's choose. The exceptions are ptm and coref, which can take the second one. -->
  <!-- NOTE: ignoring (ptm|bound-to)/@event to make graph less busy -->
  <xsl:call-template name="rdf-leaf-node" />
