@@ -77,7 +77,7 @@ William de Beaumont
  </xsl:for-each>
 </xsl:template>
 
-<xsl:template match="active | negation | polarity | modality" mode="exts-to-rdf">
+<xsl:template match="active | negation | polarity | modality | spec" mode="exts-to-rdf">
  <xsl:element name="role:{local-name()}">
   <xsl:value-of select="." />
  </xsl:element>
@@ -158,7 +158,7 @@ William de Beaumont
  <role:location rdf:ID="{generate-id()}" rdf:resource="#{@id}" />
 </xsl:template>
 
-<xsl:template match="cell-line | epistemic-modality | location | from-location | to-location | coref | assoc-with | ptm | bound-to | equals | size | scale" mode="exts-to-rdf">
+<xsl:template match="cell-line | epistemic-modality | location | from-location | to-location | coref | assoc-with | ptm | bound-to | equals | size | scale | poss-by" mode="exts-to-rdf">
  <!-- NOTE: most of these always have @id, so they always take the first branch of rdf-leaf-node's choose. The exceptions are ptm and coref, which can take the second one. -->
  <!-- NOTE: ignoring (ptm|bound-to)/@event to make graph less busy -->
  <xsl:call-template name="rdf-leaf-node" />
