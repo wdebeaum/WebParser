@@ -221,14 +221,14 @@
 	(set-texttagger-options (paragraph-texttagger-options para)))
       ;; this one goes through DrumGUI because it needs to be in the tag request
       (unless (eq :split-clauses (paragraph-split-mode para))
-        (send-msg '(request :receiver drum :content
+        (send-msg '(request :receiver reader :content
 	    (set-tag-options :split-clauses nil :split-sentences t))))
       ;; ditto parser/extraction options
       (set-parser-options (paragraph-parser-options para))
       (set-extraction-options (paragraph-extraction-options para))
       (let* ((do-inference (find-arg (paragraph-extraction-options para) :do-inference))
              (dg-reply
-	       (send-and-wait `(request :receiver drum :content
+	       (send-and-wait `(request :receiver reader :content
 		   (run-text :text ,(paragraph-text para)
 			     :reply-with-ekb nil
 			     ,@(when do-inference
@@ -258,7 +258,7 @@
     (when (paragraph-texttagger-options para)
       (set-texttagger-options *original-tt-parameters*))
     (unless (eq :split-clauses (paragraph-split-mode para))
-      (send-msg '(request :receiver drum :content
+      (send-msg '(request :receiver reader :content
 	  ;; FIXME DrumGUI doesn't let us ask it what the tag options were to
 	  ;; begin with, so we have to just assume the default tag options (at
 	  ;; time of writing these were the defaults in the only systems that
