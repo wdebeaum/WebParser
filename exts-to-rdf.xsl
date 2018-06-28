@@ -12,6 +12,7 @@
 exts-to-rdf.xsl - convert extractions to RDF (so that it can then be turned into a Graphviz graph by lf-to-rdf.xsl)
 William de Beaumont
 2016-06-15
+(with contributions by Lucian Galescu)
   -->
 
 <xsl:output method="xml" encoding="UTF-8" />
@@ -61,7 +62,7 @@ William de Beaumont
  </xsl:choose>
 </xsl:template>
 
-<xsl:template match="type | @type" mode="exts-to-rdf">
+<xsl:template match="type | @type | spec" mode="exts-to-rdf">
  <LF:type>
   <xsl:call-template name="strip-ont-prefix" />
  </LF:type>
@@ -77,14 +78,14 @@ William de Beaumont
  </xsl:for-each>
 </xsl:template>
 
-<xsl:template match="active | negation | polarity | modality | spec" mode="exts-to-rdf">
+<xsl:template match="active | negation | polarity | modality | spec | unit | min | max" mode="exts-to-rdf">
  <xsl:element name="role:{local-name()}">
   <xsl:value-of select="." />
  </xsl:element>
 </xsl:template>
 
 <!-- not sure this rule is actually necessary; this might happen anyway -->
-<xsl:template match="features | not-features" mode="exts-to-rdf">
+<xsl:template match="features | not-features | values" mode="exts-to-rdf">
  <xsl:apply-templates mode="exts-to-rdf" />
 </xsl:template>
 
@@ -148,6 +149,26 @@ William de Beaumont
  </xsl:for-each>
 </xsl:template>
 
+<xsl:template match="value" mode="exts-to-rdf">
+  <xsl:choose>
+   <xsl:when test="*">
+     <xsl:apply-templates mode="exts-to-rdf" />
+   </xsl:when>
+   <xsl:otherwise>
+     <xsl:element name="role:{local-name()}">
+       <xsl:value-of select="." />
+     </xsl:element>
+   </xsl:otherwise>
+  </xsl:choose>
+</xsl:template>
+
+<!-- timex and values expressions can be bushy, so we take a shortcut -->
+<xsl:template match="timex | values" mode="exts-to-rdf">
+  <xsl:element name="role:{local-name()}">
+    <xsl:value-of select="." />
+  </xsl:element>
+</xsl:template>
+
 <!-- xsl:template match="predicate" mode="exts-to-rdf">
  predicate no longer has any of these things
  <xsl:apply-templates select="negation | polarity | mods" mode="exts-to-rdf" />
@@ -158,7 +179,7 @@ William de Beaumont
  <role:location rdf:ID="{generate-id()}" rdf:resource="#{@id}" />
 </xsl:template>
 
-<xsl:template match="cell-line | epistemic-modality | location | from-location | to-location | coref | assoc-with | ptm | bound-to | equals | size | scale | poss-by" mode="exts-to-rdf">
+<xsl:template match="cell-line | epistemic-modality | location | from-location | to-location | coref | assoc-with | ptm | bound-to | equals | size | scale | poss-by | quantifier | quantity | over-quantity | time" mode="exts-to-rdf">
  <!-- NOTE: most of these always have @id, so they always take the first branch of rdf-leaf-node's choose. The exceptions are ptm and coref, which can take the second one. -->
  <!-- NOTE: ignoring (ptm|bound-to)/@event to make graph less busy -->
  <xsl:call-template name="rdf-leaf-node" />
