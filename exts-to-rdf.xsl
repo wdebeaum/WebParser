@@ -17,8 +17,11 @@ William de Beaumont
 
 <xsl:output method="xml" encoding="UTF-8" />
 
+<!-- don't output any text or attributes unless I tell you to, and don't bother
+     to process the input subtree at all -->
 <xsl:template match="text()|@*|input" mode="exts-to-rdf" />
 
+<!-- TT-derived features that we can borrow templates from exts-to-table for -->
 <xsl:template match="mutation | site | aa" mode="exts-to-rdf">
  <xsl:choose>
   <xsl:when test="@id"> <!-- reference -->
@@ -39,6 +42,7 @@ William de Beaumont
  </xsl:choose>
 </xsl:template>
 
+<!-- database IDs, split on | -->
 <xsl:template match="@dbid" mode="exts-to-rdf">
  <xsl:variable name="toks">
   <xsl:call-template name="str:tokenize">
@@ -51,6 +55,7 @@ William de Beaumont
  </xsl:for-each>
 </xsl:template>
 
+<!-- get rid of the ONT:: prefix if present -->
 <xsl:template name="strip-ont-prefix">
  <xsl:choose>
   <xsl:when test="starts-with(., 'ONT::')">
@@ -62,22 +67,26 @@ William de Beaumont
  </xsl:choose>
 </xsl:template>
 
+<!-- things that turn into the LF:type of an RDF graph node -->
 <xsl:template match="type | @type | spec" mode="exts-to-rdf">
  <LF:type>
   <xsl:call-template name="strip-ont-prefix" />
  </LF:type>
 </xsl:template>
 
+<!-- (quoted) text -->
 <xsl:template match="text[parent::TERM]" mode="exts-to-rdf">
  <role:text><xsl:text>"</xsl:text><xsl:value-of select="." /><xsl:text>"</xsl:text></role:text>
 </xsl:template>
 
+<!-- inevent role -->
 <xsl:template match="inevent" mode="exts-to-rdf">
  <xsl:for-each select="./@id">
   <role:inevent rdf:resource="#{.}" />
  </xsl:for-each>
 </xsl:template>
 
+<!-- simple leaf values -->
 <xsl:template match="active | negation | polarity | modality | spec | unit | min | max" mode="exts-to-rdf">
  <xsl:element name="role:{local-name()}">
   <xsl:value-of select="." />
@@ -89,6 +98,8 @@ William de Beaumont
  <xsl:apply-templates mode="exts-to-rdf" />
 </xsl:template>
 
+<!-- turn aggregate into a single edge pointing to a single node, with member
+     and except edges pointing out of it -->
 <xsl:template match="aggregate" mode="exts-to-rdf">
  <role:aggregate>
   <rdf:Description rdf:ID="{generate-id()}">
@@ -104,12 +115,16 @@ William de Beaumont
  </role:aggregate>
 </xsl:template>
 
+<!-- split components into separate component roles, pointing to internal nodes
+     in the RDF graph -->
 <xsl:template match="components" mode="exts-to-rdf">
  <xsl:for-each select="component">
   <role:component rdf:resource="#{@id}" />
  </xsl:for-each>
 </xsl:template>
 
+<!-- turn the contents of . into a leaf node in the RDF graph, with a role edge
+     going to it named based on the name of . -->
 <xsl:template name="rdf-leaf-node">
  <xsl:variable name="role-name">
   <xsl:if test="parent::not-features"><xsl:text>not-</xsl:text></xsl:if>
@@ -143,12 +158,14 @@ William de Beaumont
  </xsl:element>
 </xsl:template>
 
+<!-- groups of things that turn into leaf nodes in the RDF graph -->
 <xsl:template match="mods | qualifiers" mode="exts-to-rdf">
  <xsl:for-each select="*">
   <xsl:call-template name="rdf-leaf-node" />
  </xsl:for-each>
 </xsl:template>
 
+<!-- modifier value -->
 <xsl:template match="value" mode="exts-to-rdf">
   <xsl:choose>
    <xsl:when test="*">
@@ -174,17 +191,20 @@ William de Beaumont
  <xsl:apply-templates select="negation | polarity | mods" mode="exts-to-rdf" />
 </xsl:template -->
 
+<!-- special case for meta-role mod on role location -->
 <xsl:template match="location[@id and @mod]" mode="exts-to-rdf">
  <!-- add rdf:ID so we can refer back to this edge when adding the mod later -->
  <role:location rdf:ID="{generate-id()}" rdf:resource="#{@id}" />
 </xsl:template>
 
+<!-- things that turn into leaf nodes in the RDF graph -->
 <xsl:template match="cell-line | epistemic-modality | location | from-location | to-location | coref | assoc-with | ptm | bound-to | equals | size | scale | poss-by | quantifier | quantity | over-quantity | time" mode="exts-to-rdf">
  <!-- NOTE: most of these always have @id, so they always take the first branch of rdf-leaf-node's choose. The exceptions are ptm and coref, which can take the second one. -->
  <!-- NOTE: ignoring (ptm|bound-to)/@event to make graph less busy -->
  <xsl:call-template name="rdf-leaf-node" />
 </xsl:template>
 
+<!-- arg and argN roles -->
 <xsl:template match="*[starts-with(local-name(), 'arg')]" mode="exts-to-rdf">
  <xsl:element name="role:{substring(@role,2)}">
   <xsl:choose>
@@ -202,6 +222,7 @@ William de Beaumont
  </xsl:element>
 </xsl:template>
 
+<!-- root elements -->
 <xsl:template match="TERM | EVENT | MODALITY | EPI | CC" mode="exts-to-rdf">
  <!-- xsl:variable name="rdfid">
   <xsl:choose>
@@ -227,6 +248,7 @@ William de Beaumont
 </xsl:text>
 </xsl:template>
 
+<!-- top-level <ekb> element -->
 <xsl:template match="ekb" mode="exts-to-rdf">
  <rdf:RDF>
   <xsl:apply-templates mode="exts-to-rdf" />
