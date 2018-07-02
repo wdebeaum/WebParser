@@ -68,7 +68,7 @@ William de Beaumont
 </xsl:template>
 
 <!-- things that turn into the LF:type of an RDF graph node -->
-<xsl:template match="type | @type | spec" mode="exts-to-rdf">
+<xsl:template match="type | @type" mode="exts-to-rdf">
  <LF:type>
   <xsl:call-template name="strip-ont-prefix" />
  </LF:type>
@@ -80,10 +80,8 @@ William de Beaumont
 </xsl:template>
 
 <!-- inevent role -->
-<xsl:template match="inevent" mode="exts-to-rdf">
- <xsl:for-each select="./@id">
-  <role:inevent rdf:resource="#{.}" />
- </xsl:for-each>
+<xsl:template match="inevent[@id]" mode="exts-to-rdf">
+  <role:inevent rdf:resource="#{@id}" />
 </xsl:template>
 
 <!-- simple leaf values -->
@@ -94,7 +92,7 @@ William de Beaumont
 </xsl:template>
 
 <!-- not sure this rule is actually necessary; this might happen anyway -->
-<xsl:template match="features | not-features | values" mode="exts-to-rdf">
+<xsl:template match="features | not-features" mode="exts-to-rdf">
  <xsl:apply-templates mode="exts-to-rdf" />
 </xsl:template>
 
@@ -166,17 +164,10 @@ William de Beaumont
 </xsl:template>
 
 <!-- modifier value -->
-<xsl:template match="value" mode="exts-to-rdf">
-  <xsl:choose>
-   <xsl:when test="*">
-     <xsl:apply-templates mode="exts-to-rdf" />
-   </xsl:when>
-   <xsl:otherwise>
-     <xsl:element name="role:{local-name()}">
-       <xsl:value-of select="." />
-     </xsl:element>
-   </xsl:otherwise>
-  </xsl:choose>
+<xsl:template match="value[not(*)]" mode="exts-to-rdf">
+  <xsl:element name="role:{local-name()}">
+    <xsl:value-of select="." />
+  </xsl:element>
 </xsl:template>
 
 <!-- timex and values expressions can be bushy, so we take a shortcut -->
