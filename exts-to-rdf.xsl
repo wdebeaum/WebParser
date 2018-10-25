@@ -189,7 +189,7 @@ William de Beaumont
 </xsl:template>
 
 <!-- things that turn into leaf nodes in the RDF graph -->
-<xsl:template match="cell-line | epistemic-modality | location | from-location | to-location | coref | assoc-with | ptm | bound-to | equals | size | scale | poss-by | quantifier | quantity | over-quantity | time" mode="exts-to-rdf">
+<xsl:template match="cell-line | epistemic-modality | location | from-location | to-location | coref | assoc-with | ptm | bound-to | equals | size | scale | poss-by | quantifier | quantity | over-quantity | time | amount" mode="exts-to-rdf">
  <!-- NOTE: most of these always have @id, so they always take the first branch of rdf-leaf-node's choose. The exceptions are ptm and coref, which can take the second one. -->
  <!-- NOTE: ignoring (ptm|bound-to)/@event to make graph less busy -->
  <xsl:call-template name="rdf-leaf-node" />

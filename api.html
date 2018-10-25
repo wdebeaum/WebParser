@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="cvsId" content="$Id: api.html,v 1.28 2018/03/13 18:44:20 wdebeaum Exp $">
+<meta name="cvsId" content="$Id: api.html,v 1.29 2018/10/19 17:44:56 wdebeaum Exp $">
 <meta charset="UTF-8">
 <title>TRIPS Parser Web API Documentation</title>
 <style type="text/css">
@@ -327,7 +327,7 @@ This never actually gets out of TextTagger, since the tag only has domain-specif
 </table>
 
 <h3><code>&lt;ekb&gt;</code></h3>
-<p>Note: this section may be incomplete or out of date; the <a href="https://github.com/wdebeaum/drum/blob/master/src/DrumGUI/docs/ekb.dtd">ekb.dtd</a> is a better reference.</p>
+<p>Note: this section may be incomplete or out of date; the <a href="https://github.com/wdebeaum/drum/blob/master/src/EKB/dtd/ekb.dtd">ekb.dtd</a> is a better reference.</p>
 
 <p>The <code>&lt;ekb&gt;</code> element contains the extraction knowledge base
 derived from the complete input. It currently has these kinds of child
@@ -351,22 +351,23 @@ elements of the other types.
 
 These elements are outlined below in more detail (parts in square brackets are optional, and "..." means either "and so on", or "same format as before"):</p>
 <blockquote><code><pre>
-&lt;input&gt;
-  &lt;paragraphs&gt;
-    &lt;paragraph file="<var>filename</var>" id="<var>paragraph ID</var>"&gt;
-      <var>paragraph text</var>
-    &lt;/paragraph&gt;
-    ...
-  &lt;/paragraphs&gt;
-  &lt;sentences&gt;
-    &lt;sentence id="<var>utterance number</var>" pid="<var>paragraph ID</var>"&gt;
-      <var>sentence text</var>
-    &lt;/sentence&gt;
-    ...
-  &lt;/sentences&gt;
+&lt;input [type="<var>text or article</var>"]&gt;
+  [&lt;paragraphs&gt;
+     &lt;paragraph file="<var>filename</var>" id="<var>paragraph ID</var>"&gt;
+       <var>paragraph text</var>
+     &lt;/paragraph&gt;
+     ...
+   &lt;/paragraphs&gt;]
+  [&lt;sentences&gt;
+     &lt;sentence id="<var>utterance number</var>" pid="<var>paragraph ID</var>"&gt;
+       <var>sentence text</var>
+     &lt;/sentence&gt;
+     ...
+   &lt;/sentences&gt;]
 &lt;/input&gt;
 
-&lt;TERM id="<var>term ID</var>"
+&lt;TERM id="<var>this term ID</var>"
+      [refid="<var>another term ID</var>"]
       [dbid="<var>external database reference ID</var>"]
       start="<var>start character offset</var>" end="<var>end</var>"
       paragraph="<var>paragraph ID</var>"
@@ -374,10 +375,33 @@ These elements are outlined below in more detail (parts in square brackets are o
       lisp="<var>lisp form</var>"
       rule="<var>extraction rule ID</var>"&gt;
   &lt;type&gt;<var>TRIPS ontology type</var>&lt;/type&gt;
+  [&lt;drum-terms&gt;
+     &lt;drum-term
+           dbid
+	   name="<var>concept name</var>"
+	   match-score="<var>score between 0 and 1</var>"
+	   matched-name="<var>string from the ontology</var>"&gt;
+       &lt;types&gt;
+         &lt;type ...&gt;
+	 ...
+       &lt;/types&gt;
+       &lt;xrefs&gt;
+         &lt;xref dbid /&gt;
+	 ...
+       &lt;/xrefs&gt;
+       &lt;species&gt;<var>species name</var>&lt;/species&gt;
+       &lt;members type="<var>TRIPS ontology type</var>"&gt;
+         &lt;member id dbid type /&gt;
+	 ...
+       &lt;/members&gt;
+     &lt;/drum-term&gt;
+     ...
+   &lt;/drum-terms&gt;]
   [&lt;mods&gt;
      &lt;<var>mod or frequency or degree</var> start end&gt;
        &lt;type ...&gt;
        &lt;value ...&gt;
+       &lt;text ...&gt;
      &lt;/<var>mod or frequency or degree</var>&gt;
      ...
    &lt;/mods&gt;]
@@ -386,15 +410,18 @@ These elements are outlined below in more detail (parts in square brackets are o
     [&lt;location id="<var>ID of another term</var>" /&gt;]
     [&lt;mutation id="<var>ID of another term</var>" /&gt;]
     [&lt;mutation&gt;<var>TRUE or FALSE</var>&lt;/mutation&gt;]
-    [&lt;site id="<var>ID of another term</var>" /&gt;]
+    [&lt;site id="<var>ID of another term</var>"&gt;
+       &lt;type ...&gt;
+       &lt;text ...&gt;
+     &lt;/site&gt;]
     [&lt;site&gt;<var>... see sites under mutation below ...</var>&lt;/site&gt;]
     [&lt;cell-line id="<var>ID of another term</var>" start end&gt;
        &lt;type ...&gt;
        &lt;text ...&gt;
      &lt;/cell-line&gt;]
-    [&lt;inevent&gt;
-       &lt;event id="<var>ID of an event</var>" /&gt;
-       ...
+    [&lt;inevent id="<var>ID of an event</var>"&gt;
+       [&lt;type ...&gt;
+        &lt;text ...&gt;]
      &lt;/inevent&gt;]
     [&lt;ptm type="<var>TRIPS ontology type</var>" event="<var>ID of an event</var>" /&gt;]
     [&lt;bound-to id="<var>ID of another term</var>" event="<var>ID of an event</var>" /&gt;]
@@ -434,6 +461,7 @@ These elements are outlined below in more detail (parts in square brackets are o
 
 &lt;EVENT <var>same attributes as TERM, no dbid</var>&gt;
   &lt;type ...&gt;
+  [&lt;drum-terms ...&gt;]
   [&lt;negation&gt;<var>+ or -</var>&lt;/negation&gt;]
   [&lt;polarity&gt;<var>ONT::POSITIVE or ONT::NEGATIVE</var>&lt;/polarity&gt;]
   [&lt;force&gt;ONT::<var>TRUE or FALSE</var>&lt;/force&gt;]
