@@ -49,6 +49,19 @@ die "can't connect to facilitator: $!\n" unless ($sock);
 $sock->autoflush(1);
 print $sock $kqml_out;
 
+# timeout waiting for reply after 4 minutes on drum 2017 version
+if ($request_path =~ m[/drum"$]) {
+  $SIG{ALRM} = sub {
+    print header(-status => 503, -type => 'text/plain'), "drum is overloaded and not responding in a timely manner, try again later.";
+    # kick drum so it restarts while we're at it (slowness might be due to heap
+    # space starting to run out)
+    print $sock "(request :receiver facilitator :content (exit))\n";
+    close($sock);
+    exit 1;
+  };
+  alarm 240;
+}
+
 # read from socket until we get a reply
 my $kqml_in;
 until (defined($kqml_in)) {
@@ -72,6 +85,10 @@ until (defined($kqml_in)) {
   $kqml_in = KQML::KQMLKeywordify($msg->{':content'});
 }
 close($sock);
+
+if ($request_path =~ m[/drum"$]) {
+  alarm 0;
+}
 
 # convert KQML reply to HTTP
 lc($kqml_in->{'verb'}) eq 'http' or die "non-http reply";

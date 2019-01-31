@@ -373,7 +373,22 @@
   <div>Parser built on
    <xsl:value-of select="@parser-build-date" />
   </div>
-  <p>Development of this system has been supported in part by The National Science Foundation (grants 0958193 and 1012205), the Office of Naval Research (grant N000141110417) and the DARPA Big Mechanism program (grant W911NF-14-11-0391).</p>
+  <p>Development of this system has been supported in part by:</p>
+  <ul>
+   <li>The National Science Foundation (grants 0958193 and 1012205)</li>
+   <xsl:choose>
+    <xsl:when test="@system = 'DRUM'">
+     <li>The Office of Naval Research (grant N000141110417)</li>
+     <li>The DARPA Big Mechanism program (grant W911NF-14-11-0391)</li>
+    </xsl:when>
+    <xsl:when test="@system = 'CWMS'">
+     <li>The DARPA World Modelers program under Army Research Office contract W911NF-18-1-0464</li>
+    </xsl:when>
+    <xsl:otherwise>
+     <li>The DARPA CWC program under Army Research Office contract W911NF-15-1-0542</li>
+    </xsl:otherwise>
+   </xsl:choose>
+  </ul>
  </xsl:template>
 
  <xsl:template match="/trips-parser-output | /texttagger-output">
