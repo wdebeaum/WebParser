@@ -9,6 +9,7 @@
  <xsl:template match="/trips-parser-output | /texttagger-output">
   <xsl:variable name="title">
    <xsl:text>TRIPS/DRUM</xsl:text>
+   <xsl:if test="@service = 'DRUM-DEV'">-DEV</xsl:if>
    <xsl:if test="@extscontents">-ER</xsl:if>
    <xsl:text> </xsl:text>
    <xsl:choose>
@@ -28,6 +29,19 @@
    </head>
    <body onload="bodyLoaded()">
     <h1><xsl:value-of select="$title" /></h1>
+    <xsl:variable name="query">
+     <xsl:if test="/texttagger-output">
+      <xsl:text>?component=texttagger</xsl:text>
+     </xsl:if>
+    </xsl:variable>
+    <xsl:choose>
+     <xsl:when test="@service = 'DRUM-DEV' or @service = 'DRUM-ER'">
+      <p>(This is the nightly-updated version of the DRUM web service; see also the <a href="drum{$query}">stable 2017 version</a>.)</p>
+     </xsl:when>
+     <xsl:otherwise>
+      <p>(This is the stable 2017 version of the DRUM web service; see also the <a href="drum-dev{$query}">nightly-updated version</a>.)</p>
+     </xsl:otherwise>
+    </xsl:choose>
     <xsl:if test="@error">
      <p>Error: <xsl:value-of select="@error" /></p>
     </xsl:if>
