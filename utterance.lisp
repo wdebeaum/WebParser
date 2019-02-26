@@ -336,7 +336,8 @@
   (let* (
 	 (tto (text-unit-texttagger-options text))
 	 (tt (util:find-arg tto :tag-type))
-	 (it (util:find-arg tto :input-terms))
+	 (itg (util:find-arg tto :input-tags))
+	 (itr (util:find-arg tto :input-terms))
 	 (nsw (util:find-arg tto :no-sense-words))
 	 (sofpp (util:find-arg tto :senses-only-for-penn-poss))
 	 (sm (when (paragraph-p text) (paragraph-split-mode text)))
@@ -357,8 +358,10 @@
       ,@io
       ,@(when tt
 	 (list :tag-type (format nil "~(~s~)" tt)))
-      ,@(when it
-	 (list :input-terms (format nil "~s" it)))
+      ,@(when itg
+	 (list :input-tags (format nil "~s" itg)))
+      ,@(when itr
+	 (list :input-terms (format nil "~s" itr)))
       ,@(when nsw (list :no-sense-words (format nil "~(~{~a~^,~}~)" nsw)))
       ,@(when sofpp
 	(list :senses-only-for-penn-poss (format nil "~{~a~^,~}" sofpp)))

@@ -124,6 +124,7 @@
 			    (lfformat "svg")
 			    debug
 			    tag-type
+			    input-tags
 			    input-terms
 			    no-sense-words
 			    senses-only-for-penn-poss
@@ -160,6 +161,8 @@
 		   (
 		     ,@(when (and tag-type (not (string= "" tag-type)))
 		       (list :tag-type (read-safely-from-string tag-type)))
+		     ,@(when (and input-tags (not (string= "" input-tags)))
+		       (list :input-tags (read-safely-from-string input-tags)))
 		     ,@(when (and input-terms (not (string= "" input-terms)))
 		       (list :input-terms (read-safely-from-string input-terms)))
 		     ,@(when no-sense-words

@@ -485,6 +485,7 @@
 	    </ul>
 	   </li>
 	  </xsl:if>
+	  <li title="Accepts native tags in the :input-tags argument and integrates them into TextTagger's output as if they originated within TextTagger."><label><input type="checkbox" /> input</label></li>
 	  <xsl:if test="@system = 'WEB-TOOLS' or @system = 'BOB'">
 	   <li title="Uses GNU Aspell to correct misspellings. Sometimes aspell will split words; in that case this tagger also outputs subword tags. We use the Specialist lexicon for the spelling dictionary."><label><input type="checkbox" /> misspellings</label></li>
 	  </xsl:if>
@@ -542,13 +543,16 @@
 	  <xsl:if test="@system != 'CABOT'">
 	   <li title="Tags any substring that matches a name in the GNIS database as a named-entity with type ONT::geographic-region."><label><input type="checkbox" /> terms</label> (geographic names)</li>
 	  </xsl:if>
-	  <li title="Tags non-first variants in slash- or ampersand-separated lists of variants like &quot;Smad1/5/8&quot; as alternate spellings that include the prefix, like &quot;5&quot; -> &quot;Smad5&quot; and &quot;8&quot; -> &quot;Smad8&quot;. The Words tagger should already get the first one, &quot;Smad1&quot;."><label><input type="checkbox" /> variant-lists</label></li>
+	  <li title="Tags anything matching the :lex (or :text) argument of any of the tags from the :input-terms list with a copy of the matching tag(s)."><label><input type="checkbox" /> terms_input</label></li>
+	  <li title="Tags non-first variants in slash- or ampersand-separated lists of variants like &quot;Smad1/5/8&quot; as alternate spellings that include the prefix, like &quot;5&quot; -> &quot;Smad5&quot; and &quot;8&quot; -> &quot;Smad8&quot;. The Words tagger should already get the first one, &quot;Smad1&quot;."><label><input type="checkbox" /> variant_lists</label></li>
 	  <li title="Tags multi-word lexical items from WordNet with their sense key, part of speech, and morphology."><label><input type="checkbox" /> word_net</label></li>
 	  <li title="Tags anything that the Parser might want to consider a separate word. That includes splitting CamelCase and contractions, among other things."><label><input type="checkbox" /> words</label> (highly recommended!)</li>
 	  <xsl:if test="@system != 'STEP'">
 	   <li>Please note that in this version of the web parser, even if you select one of the sentence- or clause- splitting taggers, the TRIPS Parser will still see the whole input as one "utterance" and may not decide to split it in the same way, or at all. If you want it to split the same way, use <a href="drum">the drum paragraph parser</a> instead.</li>
 	  </xsl:if>
 	 </ul>
+	<label>Input tags:<br/>
+	 <textarea name="input-tags" id="input-tags" placeholder="Enter a Lispy list of native tags with :start/:end."><xsl:value-of select="@input-tags" /></textarea></label><br/>
 	<label>Input terms:<br/>
 	 <textarea name="input-terms" id="input-terms" placeholder="Enter a Lispy list of native tags without :start/:end."><xsl:value-of select="@input-terms" /></textarea></label><br/>
 	<label>Output sense information only for words with Penn POS tags: <input type="text" name="senses-only-for-penn-poss" id="senses-only-for-penn-poss" value="{@senses-only-for-penn-poss}" /></label> (enter a comma-separated list of tags, or use the <a href="javascript:toggleDisplay('senses-only-for-penn-poss-checkboxes')" title="Show/hide Penn POS checkboxes.">checkboxes</a>)<br />

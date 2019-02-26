@@ -57,6 +57,7 @@ Value VAL
 			      lfformat CDATA #REQUIRED
 			      debug CDATA #IMPLIED
 			      tag-type CDATA #IMPLIED
+			      input-tags CDATA #IMPLIED
 			      input-terms CDATA #IMPLIED
 			      no-sense-words CDATA #IMPLIED
 			      senses-only-for-penn-poss CDATA #IMPLIED

@@ -53,8 +53,16 @@ tr.first th {
 <dd>The text to be parsed. This should be a single sentence for <code>parse</code>, or a paragraph for <code>drum</code>. Putting a whole paper here is discouraged; use <a href="http://trips.ihmc.us/parser/papers/cgi/run-pmcid">run-pmcid</a> instead.
 <dt><code>tag-type</code>
 <dd>Select which kinds of tags TextTagger will output. These will appear in the <code>&lt;tags&gt;</code> element, and also be passed to the main TRIPS Parser module for further processing. The format of this option is presently beyond the scope of this document. <code>parse</code>, <code>cabot</code>, and <code>drum</code> have different default values for this parameter, so you can switch between them to switch to a different <code>tag-type</code>. Or you can use the tagger checkboxes in the browser interface to construct a <code>tag-type</code> to use.
+<dt><code>input-tags</code>
+<dd>Give TextTagger a list of native-format tags (including <code>:start</code>/<code>:end</code> arguments) to output (from the <code>input</code> tagger), regardless of any matching substrings. See the TextTagger README for more information. For example, if the input text is "The dishwasher broke the dishwasher." and you want the first instance of "dishwasher" to have the type <code>ONT::person</code>, and the second <code>ONT::appliance</code>, you can enable the <code>input</code> tagger in the <code>tag-type</code> parameter and put this in the <code>input-tags</code> parameter:
+<code><pre>
+(
+  (sense :lex "dishwasher" :start 4 :end 14 :lftype (ONT::person))
+  (sense :lex "dishwasher" :start 25 :end 35 :lftype (ONT::appliance))
+)
+</pre></code>
 <dt><code>input-terms</code>
-<dd>Give TextTagger a list of native-format tags (except without <code>:start</code>/<code>:end</code> arguments) to output, for matching substrings of the input. See the TextTagger README for more information. For example, if you want "foo" to be tagged as a person's name, you can put this in the <code>input-terms</code> parameter:
+<dd>Give TextTagger a list of native-format tags (except without <code>:start</code>/<code>:end</code> arguments) to output (from the <code>terms_input</code> tagger), for matching substrings of the input. See the TextTagger README for more information. For example, if you want "foo" to be tagged as a person's name, you can enable the <code>terms_input</code> tagger in the <code>tag-type</code> parameter and put this in the <code>input-terms</code> parameter:
 <code><pre>
 (
   (sense :lex "foo" :lftype (ONT::person) :penn-pos (NNP))
