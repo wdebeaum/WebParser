@@ -49,7 +49,7 @@
 	                (intern (string-upcase str) :w))
 	              (util:split-string w))
             for def in (send-and-wait
-              `(request :receiver lexiconmanager :content
+              `(request :receiver lxm :content
 	        (get-word-def ,gwd-w nil)))
             for (id words pref constit) = def
             do
@@ -110,6 +110,8 @@
 	   (make-paragraph-p (or (member trips::*trips-system* '(:drum :step))
 				 (string= uri-basename "cwmsreader")))
 	   (do-inference (member uri-basename '("drum-er" "cwmsreader") :test #'string=)))
+      (when (string= uri-basename "lex-ont")
+        (return-from handle-http-request (handle-lex-ont msg query)))
       (when (string= uri-basename "get-word-def")
         (return-from handle-http-request (handle-get-word-def msg query)))
 ;      (unless (member uri-basename '("parse" "drum") :test #'string=)

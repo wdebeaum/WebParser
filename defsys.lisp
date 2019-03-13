@@ -31,6 +31,7 @@
 		      "parse-to-xml"
 		      "utterance"
 		      "safe-reader"
+		      "lex-ont"
 		      "messages"
 		    )))
 

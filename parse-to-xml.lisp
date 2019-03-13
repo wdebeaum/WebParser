@@ -269,7 +269,7 @@
 	(Linux
 	  (run-program-and-read-output
 	      "/usr/bin/stat"
-	      "--printf=%z"
+	      "--printf=%y"
 	      filename))
 	)))
 
