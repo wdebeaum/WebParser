@@ -54,7 +54,6 @@
 				))))))))
 	      finally (return-from defs nil)
 	      )))))
-(trace get-sense-source)
 
 (in-package :webparser)
 (in-component :webparser)
@@ -171,7 +170,7 @@
   "If the sense was looked up from WordNet instead of our lexicon, return a new
    version of the sense XML with the WordNet sense that was used to map it to
    the ONT type from the original sense XML as the new class, and any
-   intermediate synsets as extra ancestors."
+   intermediate synsets as extra ancestors. Also include the gloss from WN."
   (let* ((ont-type
            (intern (string-upcase (util:find-arg-in-act xml :onttype)) :ont))
 	 (in-trips-p (member (list gwd-w pos) (lxm::get-words-from-lf ont-type)
@@ -200,6 +199,13 @@
 		      `(class :onttype ,wn-class-id
 			      :words ,new-words
 			      :ancestors ,new-ancestors
+			      :gloss
+				;; I'm pretty sure WN 3.0 doesn't have multiple
+				;; glosses separated by | like this, but that's
+				;; how WF reads them, so just in case, I'll put
+				;; the | back here
+			        ,(format nil "~{~a~^ | ~}"
+					 (slot-value ss 'wf::glosses))
 			      ,@(nthcdr 7 xml)
 			      )))))
 	    finally (return xml) ; just in case we don't find it for some reason
@@ -239,6 +245,8 @@
 	      (weblex::sort-pos-and-classes
 	        `(weblex::word :name ,w_str
 			       :modified ,(get-word-modified-date q)
+			       ,@(when lxm::*use-trips-and-wf-senses*
+			           '(:use-trips-and-wf-senses "T"))
 		  ,@(loop for def in word-defs
 			  for (pct pos . feats) = (fourth def)
 			  for (colon-star ont-type lemma) =
@@ -485,14 +493,27 @@ $(document).ready(function(){
 "))
 
 (defun handle-lex-ont (msg query)
-  (destructuring-bind (&key side ret q &allow-other-keys) query
+  (destructuring-bind (&key side ret q 
+  		       use-trips-and-wf-senses
+		       &allow-other-keys) query
     (reply-to-msg msg 'tell :content
       (let ((*package* wf::*wf-package-var*)) ; nip WF pkg problems in the bud
 	(cond
 	  ((equalp side "lex")
 	    (cond
 	      ((equalp ret "autocomplete") (lex-autocomplete q))
-	      (t (lex-xml q))
+	      (t
+	        ;; temporarily set utawfs to requested value, saving old value
+		;; also temporarily set wfsl really high
+	        (let ((old-utawfs lxm::*use-trips-and-wf-senses*)
+		      (old-wfsl lxm::*wf-sense-limit*))
+		  (setf lxm::*use-trips-and-wf-senses* 
+			(when use-trips-and-wf-senses t)
+			lxm::*wf-sense-limit* 1000000)
+		  (unwind-protect (lex-xml q) ;; do the word lookup
+		    ;; reset utawfs to old value
+		    (setf lxm::*use-trips-and-wf-senses* old-utawfs
+		          lxm::*wf-sense-limit* old-wfsl))))
 	      ))
 	  ((equalp side "ont")
 	    (cond

@@ -103,8 +103,16 @@ function setTargets() {
  <h1>TRIPS+WN Word Lookup</h1>
  <form action="#">
   <input type="hidden" name="side" value="lex" />
-  <input type="text" size="40" name="q" id="search-input" />
-  <input type="submit" value="Look Up" />
+  <input type="text" size="40" name="q" id="search-input" value="{@name}" />
+  <input type="submit" value="Look Up" /><br/>
+  <label>
+   <input type="checkbox" name="use-trips-and-wf-senses" value="t">
+    <xsl:if test="@use-trips-and-wf-senses">
+     <xsl:attribute name="checked">checked</xsl:attribute>
+    </xsl:if>
+   </input>
+   Find mapped WN senses even for POS with native TRIPS senses
+  </label>
  </form>
  <h2><xsl:value-of select="@name" /></h2>
  <ul>
@@ -140,6 +148,9 @@ function setTargets() {
        <span style="display: none" id="{$pos}-{@onttype}-ancestors"><xsl:value-of select="@ancestors" /></span>
       </dt>
       <dd>
+       <xsl:if test="@gloss">
+        Gloss: <xsl:value-of select="@gloss" /><br />
+       </xsl:if>
        Frames:
        <dl style="padding-left: 2.0em">
         <xsl:for-each select="FRAME">
