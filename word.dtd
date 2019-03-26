@@ -1,7 +1,9 @@
+<!ELEMENT WORDS (WORD*)>
+<!ATTLIST WORDS q CDATA #REQUIRED
+	        modified CDATA #REQUIRED
+	        use-trips-and-wf-senses CDATA #IMPLIED>
 <!ELEMENT WORD (POS*)>
-<!ATTLIST WORD name CDATA #REQUIRED
-	       modified CDATA #REQUIRED
-	       use-trips-and-wf-senses CDATA #IMPLIED>
+<!ATTLIST WORD name CDATA #REQUIRED>
 <!ELEMENT POS (MORPH*,CLASS*)>
 <!ATTLIST POS name CDATA #REQUIRED>
 <!ELEMENT MORPH EMPTY>

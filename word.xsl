@@ -5,7 +5,7 @@
     doctype-system="http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"
     doctype-public="-//W3C//DTD XHTML 1.0 Transitional//EN" />
 
-<xsl:template match="/WORD">
+<xsl:template match="/WORDS">
  <html>
  <head>
  <title>TRIPS Word Lookup: <xsl:value-of select="@name" /></title>
@@ -103,7 +103,7 @@ function setTargets() {
  <h1>TRIPS+WN Word Lookup</h1>
  <form action="#">
   <input type="hidden" name="side" value="lex" />
-  <input type="text" size="40" name="q" id="search-input" value="{@name}" />
+  <input type="text" size="40" name="q" id="search-input" value="{@q}" />
   <input type="submit" value="Look Up" /><br/>
   <label>
    <input type="checkbox" name="use-trips-and-wf-senses" value="t">
@@ -114,60 +114,62 @@ function setTargets() {
    Find mapped WN senses even for POS with native TRIPS senses
   </label>
  </form>
- <h2><xsl:value-of select="@name" /></h2>
- <ul>
-  <xsl:for-each select="POS">
-   <xsl:variable name="pos" select="@name" />
-   <li>
-   <xsl:choose> <!-- map abbreviated parts-of-speech to their spelled-out versions -->
-    <xsl:when test="$pos = 'adj'">Adjective</xsl:when>
-    <xsl:when test="$pos = 'adv'">Adverb</xsl:when>
-    <xsl:when test="$pos = 'art'">Article</xsl:when>
-    <xsl:when test="$pos = 'conj'">Conjunction</xsl:when>
-    <xsl:when test="$pos = 'fp'">Filled-Pause</xsl:when>
-    <xsl:when test="$pos = 'n'">Noun</xsl:when>
-    <xsl:when test="$pos = 'prep'">Preposition</xsl:when>
-    <xsl:when test="$pos = 'pro'">Pronoun</xsl:when>
-    <xsl:when test="$pos = 'punc'">Punctuation</xsl:when>
-    <xsl:when test="$pos = 'quan'">Quantifier</xsl:when>
-    <xsl:when test="$pos = 'v'">Verb</xsl:when>
-    <xsl:otherwise><xsl:value-of select="$pos" /></xsl:otherwise>
-   </xsl:choose> Classes:<br />
-    <dl style="padding-left: 2.0em">
-     <xsl:for-each select="MORPH[@cat='nom' and @from]">
-      <dt>Nominalization of
-       <a href="lex-ont?side=lex&amp;q={@from}"><xsl:value-of select="@from" /></a>
-      </dt>
-     </xsl:for-each>
-     <xsl:for-each select="CLASS">
-      <dt>
-       <a href="lex-ont?side=ont&amp;q={@onttype}#highlight" style="color: #7f0000">ONT::<xsl:value-of select="@onttype" /></a>
-       (<a href="javascript:toggleVisible('{$pos}-{@onttype}-synset')" id="{$pos}-{@onttype}-synset-link">show synset</a>)
-       <span style="display: none" id="{$pos}-{@onttype}-synset"><xsl:value-of select="@words" /></span>
-       (<a href="javascript:toggleVisible('{$pos}-{@onttype}-ancestors')" id="{$pos}-{@onttype}-ancestors-link">show ancestors</a>)
-       <span style="display: none" id="{$pos}-{@onttype}-ancestors"><xsl:value-of select="@ancestors" /></span>
-      </dt>
-      <dd>
-       <xsl:if test="@gloss">
-        Gloss: <xsl:value-of select="@gloss" /><br />
-       </xsl:if>
-       Frames:
-       <dl style="padding-left: 2.0em">
-        <xsl:for-each select="FRAME">
-	 <dt style="color: #007f00"><xsl:value-of select="@desc" /></dt>
-	 <!-- nilled is not supported by IE or Firefox, only Safari -->
-	 <!-- xsl:if test="not(nilled(@example))" -->
-	 <xsl:if test="@example">
-	  <dd>Example: <i><xsl:value-of select="@example" /></i></dd>
-	 </xsl:if>
-	</xsl:for-each>
-       </dl>
-      </dd>
-     </xsl:for-each>
-    </dl>
-   </li>
-  </xsl:for-each>
- </ul>
+ <xsl:for-each select="WORD">
+  <h2><xsl:value-of select="@name" /></h2>
+  <ul>
+   <xsl:for-each select="POS">
+    <xsl:variable name="pos" select="@name" />
+    <li>
+    <xsl:choose> <!-- map abbreviated parts-of-speech to their spelled-out versions -->
+     <xsl:when test="$pos = 'adj'">Adjective</xsl:when>
+     <xsl:when test="$pos = 'adv'">Adverb</xsl:when>
+     <xsl:when test="$pos = 'art'">Article</xsl:when>
+     <xsl:when test="$pos = 'conj'">Conjunction</xsl:when>
+     <xsl:when test="$pos = 'fp'">Filled-Pause</xsl:when>
+     <xsl:when test="$pos = 'n'">Noun</xsl:when>
+     <xsl:when test="$pos = 'prep'">Preposition</xsl:when>
+     <xsl:when test="$pos = 'pro'">Pronoun</xsl:when>
+     <xsl:when test="$pos = 'punc'">Punctuation</xsl:when>
+     <xsl:when test="$pos = 'quan'">Quantifier</xsl:when>
+     <xsl:when test="$pos = 'v'">Verb</xsl:when>
+     <xsl:otherwise><xsl:value-of select="$pos" /></xsl:otherwise>
+    </xsl:choose> Classes:<br />
+     <dl style="padding-left: 2.0em">
+      <xsl:for-each select="MORPH[@cat='nom' and @from]">
+       <dt>Nominalization of
+	<a href="lex-ont?side=lex&amp;q={@from}"><xsl:value-of select="@from" /></a>
+       </dt>
+      </xsl:for-each>
+      <xsl:for-each select="CLASS">
+       <dt>
+	<a href="lex-ont?side=ont&amp;q={@onttype}#highlight" style="color: #7f0000">ONT::<xsl:value-of select="@onttype" /></a>
+	(<a href="javascript:toggleVisible('{$pos}-{@onttype}-synset')" id="{$pos}-{@onttype}-synset-link">show synset</a>)
+	<span style="display: none" id="{$pos}-{@onttype}-synset"><xsl:value-of select="@words" /></span>
+	(<a href="javascript:toggleVisible('{$pos}-{@onttype}-ancestors')" id="{$pos}-{@onttype}-ancestors-link">show ancestors</a>)
+	<span style="display: none" id="{$pos}-{@onttype}-ancestors"><xsl:value-of select="@ancestors" /></span>
+       </dt>
+       <dd>
+	<xsl:if test="@gloss">
+	 Gloss: <xsl:value-of select="@gloss" /><br />
+	</xsl:if>
+	Frames:
+	<dl style="padding-left: 2.0em">
+	 <xsl:for-each select="FRAME">
+	  <dt style="color: #007f00"><xsl:value-of select="@desc" /></dt>
+	  <!-- nilled is not supported by IE or Firefox, only Safari -->
+	  <!-- xsl:if test="not(nilled(@example))" -->
+	  <xsl:if test="@example">
+	   <dd>Example: <i><xsl:value-of select="@example" /></i></dd>
+	  </xsl:if>
+	 </xsl:for-each>
+	</dl>
+       </dd>
+      </xsl:for-each>
+     </dl>
+    </li>
+   </xsl:for-each>
+  </ul>
+ </xsl:for-each>
  <p>Data file last modified: <xsl:value-of select="@modified" /></p>
  </body>
  </html>

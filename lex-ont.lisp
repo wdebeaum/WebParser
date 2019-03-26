@@ -159,6 +159,143 @@
 	finally (return nil)
 	))
 
+;; I'm fed up with all the subtly different representations of words in TRIPS/WN
+(defstruct word
+	;;	single word	multiword		use
+  strs	;	("foo")		("foo" "bar")		run-morphy return
+  str	;	"foo"		"foo bar"		query
+  str-	;	"foo"		"foo-bar"		(intermediate form)
+  str_	;	"foo"		"foo_bar"		WordNet lemmas
+  syms	;	(w::foo)	(w::foo w::bar)		(intermediate form)
+  sym-	;	w::foo		w::foo-bar		:* forms
+  sym_	;	w::foo		w::foo_bar		(intermediate form)
+  gwd	;	w::foo		(w::foo w::bar)		get-word-def arg
+  dw	;	w::foo		(w::foo w::bar)		define-words arg
+  	;			*or* (w::foo (w::bar))	(particle verbs)
+  ; also, some words genuinely have a hyphen in them, like "hard-boil"; that
+  ; becomes:
+  ; strs: ("hard-boil")
+  ; str, str-, str_: "hard-boil"
+  ; syms, gwd, dw: (w::hard w::punc-minus w::boil)
+  ; sym-: w::hard-punc-minus-boil
+  ; sym_: w::hard_punc-minus_boil
+  )
+
+(defun set-word-syms-from-strs (w)
+  "Given a word structure with its str* slots set, set its sym* slots."
+  (with-slots (strs str- str_ syms sym- sym_ gwd dw) w
+    (setf syms (mapcan #'parser::tokenize strs)
+	  sym- (intern (format nil "~{~a~^-~}" syms) :w)
+	  sym_ (intern (format nil "~{~a~^_~}" syms) :w)
+	  gwd  (if (= 1 (length syms)) (car syms) syms)
+	  dw   gwd)))
+
+(defun set-word-strs-from-syms (w)
+  "Given a word structure with its sym* slots set, set its str* slots."
+  (with-slots (strs str str- str_ syms sym- sym_) w
+    (setf strs (mapcar #'string-downcase (weblex::undo-punc-symbols syms))
+	  str  (format nil "~{~a~^ ~}" strs)
+	  str- (format nil "~{~a~^-~}" strs)
+	  str_ (format nil "~{~a~^_~}" strs))
+    ))
+
+(defun make-word-from-string (str?)
+  (let ((w (make-word)))
+    (with-slots (strs str str- str_) w
+      (cond
+	((position #\_ str?)
+	   (setf strs (util:split-string str? :on #\_)
+		 str  (substitute #\Space #\_ str?)
+		 str- (substitute #\- #\_ str?)
+		 str_ str?))
+; commented out to preserve hyphens in query and in WN lemmas
+;	((position #\- str?)
+;	   (setf strs (util:split-string str? :on #\-)
+;		 str  (substitute #\Space #\- str?)
+;		 str- str?
+;		 str_ (substitute #\_ #\- str?)))
+	(t
+	   (setf strs (util:split-string str?)
+		 str  str?
+		 str- (substitute #\- #\Space str?)
+		 str_ (substitute #\_ #\Space str?)))
+	))
+    (set-word-syms-from-strs w)
+    w))
+
+(defun make-word-from-string-list (strs)
+  (let ((w (make-word :strs strs
+                      :str  (format nil "~{~a~^ ~}" strs)
+		      :str- (format nil "~{~a~^-~}" strs)
+		      :str_ (format nil "~{~a~^_~}" strs))))
+    (set-word-syms-from-strs w)
+    w))
+
+(defun make-word-from-symbol (sym?)
+  (loop with str =
+          ;; lc; s/-/ /g;
+          (substitute #\Space #\- (string-downcase (symbol-name sym?)))
+	;; s/ punc minus /-/g;
+        for start = (search " punc minus " str)
+	  then (search " punc minus " str :start2 (1+ start))
+	while start
+	do (setf str (concatenate 'string
+	  (subseq str 0 start)
+	  "-"
+	  (subseq str (+ start 12))
+	  ))
+	finally (return (make-word-from-string str))))
+
+(defun make-word-from-symbol-list (syms?)
+  (let* ((syms (util:flatten syms?))
+	 (w (make-word :syms syms
+                       :sym- (intern (format nil "~{~a~^-~}" syms) :w)
+		       :sym_ (intern (format nil "~{~a~^_~}" syms) :w)
+		       :gwd (if (= 1 (length syms)) (car syms) syms)
+		       :dw (if (= 1 (length syms?)) (car syms?) syms?))))
+    (set-word-strs-from-syms w)
+    w))
+
+(defun make-word-from-list (l)
+  (etypecase (car l)
+    (string (make-word-from-string-list l))
+    (symbol (make-word-from-symbol-list l))
+    ))
+
+(defun make-word-from-anything (x)
+  (etypecase x
+    (symbol (make-word-from-symbol x))
+    (string (make-word-from-string x))
+    (cons (make-word-from-list x))
+    ))
+
+(defstruct word-def
+  word ; original (non-base-form?) word used to look up this def
+  lemma ; base-form word
+  pos ; TRIPS W:: pos symbol
+  ont-type ; TRIPS ONT:: type symbol
+  template ; TRIPS template name
+  def-list ; original list form of the def from get-word-def
+  (synset nil) ; wf::wordnet-synset (or nil if not from WordNet)
+  (sense-key nil) ; sense key string with %: (or nil)
+  (wn-path nil) ; synsets on the path from ont-type to synset (including synset)
+  )
+
+(defun maybe-set-word-def-synset (d wn-word wn-pos synsets)
+  "Try to set the synset, sense-key, and wn-path slots of a word-def struct,
+   using one of the given synsets, and the given word and POS."
+  (loop for ss in synsets
+	for wn-path =
+	  (wordnet-ancestors-of-mapped-synset ss (word-def-ont-type d))
+	when wn-path
+	do (setf (word-def-synset d) ss
+		 (word-def-sense-key d)
+		   (wf::sense-key-for-word-and-synset wn-word ss)
+		 (word-def-wn-path d) wn-path)
+	   (return t)
+	finally (return nil)
+	))
+
 (defvar *trips2wn-pos* '(
   (w::n "noun")
   (w::v "verb")
@@ -166,115 +303,215 @@
   (w::adv "adv")
   ) "inverse of wf::convert-wordnet-pos-to-trips")
 
-(defun maybe-wordnetify-sense-xml (gwd-w w_str pos xml)
+(defun make-word-def-from-list (q def-list)
+  "Make a word-def struct from one of the lists returned by get-word-def for a
+   definition of a single sense. q is the search query string."
+  (destructuring-bind (pct pos . feats)
+      (fourth def-list)
+      (declare (ignore pct))
+    (destructuring-bind (colon-star ont-type lemma-sym)
+        (second (assoc 'w::lf feats))
+	(declare (ignore colon-star))
+      (let* ((w (make-word-from-string q))
+             (l (make-word-from-symbol lemma-sym))
+	     (d (make-word-def :word w :lemma l :pos pos :ont-type ont-type
+			       :template (second (assoc 'w::template feats))
+			       :def-list def-list))
+             (gwflf-entry (list (word-gwd l) pos))
+	     (in-trips-p (member gwflf-entry (lxm::get-words-from-lf ont-type)
+				 :test #'equalp))
+	     )
+        ;; try to set wordnet slots if it's not in trips
+	(unless in-trips-p
+	  (let* ((wn-pos (second (assoc pos *trips2wn-pos*)))
+	         ;; try the search word first
+		 (wn-word (word-str_ w))
+	         (word-synsets (wf::get-synsets wf::wm wn-word wn-pos)))
+	    (unless (maybe-set-word-def-synset d wn-word wn-pos word-synsets)
+	      ;; search word failed, try morphy (like wf::get-all-synsets does,
+	      ;; but this way we can save which lemma actually worked)
+	      (loop with morphy-words =
+		      (second (assoc wn-pos (wf::run-morphy wf::wm wn-word)
+				     :test #'string=))
+		    for morphy-word in morphy-words
+		    for morphy-synsets =
+		      (wf::get-synsets wf::wm morphy-word wn-pos)
+		    when (maybe-set-word-def-synset d morphy-word wn-pos
+						    morphy-synsets)
+		    do (setf (word-def-lemma d)
+			     (make-word-from-string morphy-word))
+		       (return nil)
+		    ))))
+	d))))
+
+(defun maybe-wordnetify-sense-xml (d xml)
   "If the sense was looked up from WordNet instead of our lexicon, return a new
    version of the sense XML with the WordNet sense that was used to map it to
    the ONT type from the original sense XML as the new class, and any
    intermediate synsets as extra ancestors. Also include the gloss from WN."
-  (let* ((ont-type
-           (intern (string-upcase (util:find-arg-in-act xml :onttype)) :ont))
-	 (in-trips-p (member (list gwd-w pos) (lxm::get-words-from-lf ont-type)
-			     :test #'equalp)))
-    (if in-trips-p
-      xml
-      ; else not in TRIPS, therefore in WN
-      (loop with old-ancestors = (util:find-arg-in-act xml :ancestors)
-            with wn-pos = (second (assoc pos *trips2wn-pos*))
-	    for ss in (wf::get-synsets wf::wm w_str wn-pos)
-	    do
-	      (let ((wn-anc-sss
-		      (wordnet-ancestors-of-mapped-synset ss ont-type)))
-	        (when wn-anc-sss
-		  (let* ((wn-anc-ids (reverse (mapcar
-			   (lambda (anc-ss)
-			     (sense-key-to-id (first
-			         (wf::sense-keys-for-synset anc-ss))))
-			   wn-anc-sss)))
-		         (wn-class-id (pop wn-anc-ids))
-			 (new-words (format nil "~{~a~^,~}" (wf::wn-lemmas ss)))
-			 (new-ancestors
-			   (format nil "~{~a,~}~(~a~),~a"
-			       wn-anc-ids ont-type old-ancestors)))
-		    (return
-		      `(class :onttype ,wn-class-id
-			      :words ,new-words
-			      :ancestors ,new-ancestors
-			      :gloss
-				;; I'm pretty sure WN 3.0 doesn't have multiple
-				;; glosses separated by | like this, but that's
-				;; how WF reads them, so just in case, I'll put
-				;; the | back here
-			        ,(format nil "~{~a~^ | ~}"
-					 (slot-value ss 'wf::glosses))
-			      ,@(nthcdr 7 xml)
-			      )))))
-	    finally (return xml) ; just in case we don't find it for some reason
-	    ))))
+  (with-slots (ont-type synset sense-key wn-path) d
+    (if (null synset)
+      xml ; in trips
+      ;; else in wordnet
+      (let* ((old-ancestors (util:find-arg-in-act xml :ancestors))
+             (wn-anc-ids
+	       (reverse (mapcar
+		 (lambda (anc-ss)
+		   (sense-key-to-id (first
+		     (wf::sense-keys-for-synset anc-ss))))
+		 wn-path)))
+	     (wn-class-id (pop wn-anc-ids))
+	     (new-words (format nil "~{~a~^,~}" (wf::wn-lemmas synset)))
+             (new-ancestors
+	       (format nil "~{~a,~}~(~a~),~a"
+		   wn-anc-ids ont-type old-ancestors))
+	     (gloss
+		;; I'm pretty sure WN 3.0 doesn't have multiple glosses
+		;; separated by | like this, but that's how WF reads them, so
+		;; just in case, I'll put the | back here
+		(format nil "~{~a~^ | ~}"
+			 (slot-value synset 'wf::glosses)))
+	     )
+	`(class :onttype ,wn-class-id
+		:words ,new-words
+		:ancestors ,new-ancestors
+		:gloss ,gloss
+		,@(nthcdr 7 xml)
+		)))))
 
+(defvar *prefixes* nil)
+
+(defun remove-prefix (q)
+  "Given a query string, return a list of possible query strings with defined
+   prefixes removed, sorted from longest to shortest prefix."
+  (unless *prefixes* ; lazily set *prefixes* so we know the lexicon is loaded
+    (setf *prefixes* (sort
+	  (loop for sym in (lxm::lexicon-db-base-forms lxm::*lexicon-data*)
+		;; when the base form is a symbol ending with -
+		for str = (when (symbolp sym) (symbol-name sym))
+		for last-index = (when str (- (length str) 1))
+		when (and str (char= #\- (char str last-index)))
+		;; collect the lowercase string without the -
+		collect (string-downcase (subseq str 0 last-index))
+		)
+	  #'> :key #'length)))
+  (loop for prefix in *prefixes*
+        when (and (< (length prefix) (length q))
+	             (string-equal prefix (subseq q 0 (length prefix))))
+	collect (subseq q (length prefix))
+	)
+  )
+
+;; Test cases:
+	; problems
+;; "truck" - in TRIPS and WN as noun and verb
+;; "panther" - in WN and not TRIPS
+;; "panthers" - needs morphy
+	; frame becomes nil? seems a bug in get-word-def, maybe
+;; "thing" - is in TRIPS, but is ONT::referential-sem (is also in WN, but maps the same, so we don't see it even with the checkbox checked)
+;; "entity" - is in WN and not TRIPS, and legit. maps to ONT::referential-sem
+;; "take" - is in WN and TRIPS, lots of senses
+;; "taken" - irregular form
+;; "greeting" - regular non-base form, in WN and TRIPS, >2 verb senses of "greet" in WN
+;; "look up" - particle verb in TRIPS (also in WN, but maps the same)
+;; "take care" - non-particle multiword verb in TRIPS, also 3 senses in WN but two of them to the same ont type as the TRIPS sense, so we only get the other one
+;; "hard-boil" - in TRIPS (with w::punc-minus) but not WN (with - or _)
+;; "still-fish" - in WN but not TRIPS, only with - and not _
+;; "bulkier" - satellite adj in WN (with morphy) but not TRIPS
+;; "antinutrient" - in neither WN nor TRIPS, but we could separate "anti-" prefix and get "nutrient" from WN and TRIPS
+	; we don't have w::anti- defined
+;; "homoiconic" - TRIPS has homo- and icon, WN has icon and iconic
 (defun lex-xml (q)
   (unless q (setf q "word"))
-  (let* (
-         ;; the search word in different forms:
-	 ;; list of w:: symbols
-         (w-list (mapcar (lambda (str)
-			   (intern (string-upcase str) :w))
-			 (util:split-string q)))
-	 ;; the w arg for lxm::get-word-def (w:: symbol for 1 word; list of w::
-	 ;; symbols for multiword)
-	 ;; FIXME? particle verbs like (w::look (w::up))
-         (gwd-w (if (= 1 (length w-list)) (car w-list) w-list))
-	 ;; single w:: symbol, with hyphens between words
-         (w-sym (intern (format nil "~{~a~^-~}" w-list) :w))
-	 ;; single lowercase string, with underscores between words
-	 (w_str (weblex::normalize-word-name w-list))
+  (let* ((q-word (make-word-from-string q))
 	 (word-defs
-	   (let ((*package* (find-package :webparser)))
-	     (send-and-wait `(request :receiver lxm :content
-		 (get-word-def ,gwd-w nil))))))
-    (if (and (= 1 (length word-defs))
-	     (equalp `(:* ont::referential-sem ,w-sym)
-		     (second (assoc 'w::lf (cddr (fourth (car word-defs)))))))
-      '(http 404) ;; referential-sem means not found
-      `(http 200 ;; else found
+	   (mapcar (lambda (dl) (make-word-def-from-list q dl))
+		   (let ((*package* (find-package :webparser)))
+		     (send-and-wait `(request :receiver lxm :content
+			 (get-word-def ,(word-gwd q-word) nil))))))
+	 (lemmas
+	   (remove-duplicates
+	       (mapcar #'word-def-lemma word-defs)
+	       :key #'word-str :test #'equalp))
+	 )
+    (if (and (= 1 (length word-defs)) ; only one definition
+             ;; and it's ONT::referential-sem
+             (eq 'ont::referential-sem (word-def-ont-type (car word-defs)))
+	     ;; and ONT::referential-sem doesn't actually have this word/pos
+	     (not (member (list (word-gwd (word-def-lemma (car word-defs)))
+	                        (word-def-pos (car word-defs)))
+	                  (lxm::get-words-from-lf 'ont::referential-sem)
+			  :test #'equalp))
+	     ;; and we didn't get it from WordNet
+	     (null (word-def-synset (car word-defs)))
+	     )
+      ;; q not found; try recursing on versions of it with prefixes removed
+      (loop for q-root in (remove-prefix q)
+            for response = (lex-xml q-root)
+	    unless (= 404 (second response))
+	    return response
+	    finally (return
+	      `(http 404 ;; not found
+		:content-type "text/xml; charset=utf-8"
+		:content ,(with-output-to-string (s)
+		  (format-xml-header s :xsl "../style/word.xsl"
+				       :doctype "WORDS" :dtd "../word.dtd")
+		  (format-xml s
+		    `("WORDS" :q ,q
+			      :modified ,(get-word-modified-date q)
+			      ,@(when lxm::*use-trips-and-wf-senses*
+				  '(:use-trips-and-wf-senses "T"))
+			      ("WORD" :name "not found")))
+		  ))
+	    ))
+      `(http 200 ;; else q found
 	:content-type "text/xml; charset=utf-8"
 	:content ,(with-output-to-string (s)
 	  (format-xml-header s :xsl "../style/word.xsl"
-			       :doctype "WORD" :dtd "../word.dtd")
-	  (format s "~a"
-	    (weblex::convert-lisp-to-xml
-	      (weblex::sort-pos-and-classes
-	        `(weblex::word :name ,w_str
-			       :modified ,(get-word-modified-date q)
-			       ,@(when lxm::*use-trips-and-wf-senses*
-			           '(:use-trips-and-wf-senses "T"))
-		  ,@(loop for def in word-defs
-			  for (pct pos . feats) = (fourth def)
-			  for (colon-star ont-type lemma) =
-			    (second (assoc 'w::lf feats))
-			  for template = (second (assoc 'w::template feats))
-			  when (string-equal (symbol-name lemma)
-					     (util:replace-space-with-hyphen q))
-			  collect
-			    `((weblex::pos :name ,pos
-			       ,(maybe-wordnetify-sense-xml gwd-w w_str pos
-			          (weblex::sense-to-xml
-				    (or (weblex::get-sense-source
-					    gwd-w pos ont-type template)
-					`((weblex::lf-parent ,ont-type)
-					  (weblex::templ ,template)))
-				    nil))))
-			  into xmls
-			  finally (return 
-			    (mapcar
-			      (lambda (pos-xml)
-			        ;; add morph
-			        (let ((pos (third pos-xml)))
-				  `(weblex::pos :name ,pos
-				    ,@(weblex::get-morphs-xmls gwd-w pos)
-				    ,@(cdddr pos-xml))))
-			      (reduce #'weblex::merge-pos-xml-lists xmls
-				      :initial-value nil)))
-			  )))))
+			       :doctype "WORDS" :dtd "../word.dtd")
+	  (format-xml-start s
+	    `("WORDS" :q ,q
+		      :modified ,(get-word-modified-date q)
+		      ,@(when lxm::*use-trips-and-wf-senses*
+			  '(:use-trips-and-wf-senses "T"))
+		      ""))
+	  (dolist (lemma lemmas)
+	    (format s "~a"
+	      (weblex::convert-lisp-to-xml
+		(weblex::sort-pos-and-classes
+		  `(weblex::word :name ,(word-str_ lemma)
+		    ,@(loop for d in word-defs
+			    when (eq (word-sym_ lemma)
+				     (word-sym_ (word-def-lemma d)))
+			    collect
+			      (with-slots (pos ont-type template) d
+				`((weblex::pos :name ,pos
+				   ,(maybe-wordnetify-sense-xml d
+				      (weblex::sense-to-xml
+					(or ;; try to get the original source
+					    ;; code for this sense, in order to
+					    ;; get examples and template args
+					    (weblex::get-sense-source
+						(word-dw lemma)
+						pos ont-type template)
+					    ;; failing that, make our own
+					    `((weblex::lf-parent ,ont-type)
+					      (weblex::templ ,template)))
+					nil)))))
+			    into xmls
+			    finally (return 
+			      (mapcar
+				(lambda (pos-xml)
+				  ;; add morph
+				  (let ((pos (third pos-xml)))
+				    `(weblex::pos :name ,pos
+				      ,@(weblex::get-morphs-xmls
+				          (word-gwd lemma) pos)
+				      ,@(cdddr pos-xml))))
+				(reduce #'weblex::merge-pos-xml-lists xmls
+					:initial-value nil)))
+			    ))))))
+	  (format-xml-end s "WORDS")
 	  )
 	)
       )
@@ -408,7 +645,7 @@ loadONTLI('root');
 			       ))
 			   ))))
 	        ))
-	    `(http 404))))
+	    `(http 404 :content-type "text/plain" :content "not found"))))
       (q
 	(let* ((ont-type (intern (string-upcase q) :ONT))
 	       (name (string-downcase q))
@@ -438,9 +675,9 @@ loadONTLI('root');
 		  (format s "~a" (weblex::convert-lisp-to-xml xml))
 		  )
 		))
-	    '(http 404))))
+	    '(http 404 :content-type "text/plain" :content "not found"))))
       (t
-        '(http 404))
+        '(http 404 :content-type "text/plain" :content "not found"))
       )))
 
 (defun ont-html (q)
