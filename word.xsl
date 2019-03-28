@@ -10,6 +10,13 @@
  <head>
  <title>TRIPS Word Lookup: <xsl:value-of select="@name" /></title>
  <meta name="date" scheme="RFC822" content="{@modified}" />
+ <style type="text/css">
+  .wn {
+    <xsl:if test="@show-wn-senses-only-for-core-synsets">
+      display: none;
+    </xsl:if>
+  }
+ </style>
  <style type="text/css">ul { padding-left: 1em; }</style>
 
 <!-- jQuery autocomplete -->
@@ -58,6 +65,18 @@ function toggleVisible(id, linktext)
   }
 }
 
+function setClassVisible(cn, visible) {
+  var sel = '.' + cn;
+  var rules = document.styleSheets[0].cssRules;
+  for (var i = 0; i < rules.length; i++) {
+    if ((rules[i] instanceof CSSStyleRule) &&
+        rules[i].selectorText == sel) {
+      rules[i].style.display = (visible ? null : "none");
+      break;
+    }
+  }
+}
+
 // turn a comma-separated list of words into a list of links to their data files
 function linkifyWords(wordstring)
 {
@@ -70,6 +89,13 @@ function linkifyWords(wordstring)
   return linkstring + "<br />"
 }
 
+function fixSenseKey(sk) {
+  return sk.replace(
+    /-([1-5])-(\d{2})-(\d{2})-(?:-|(\w+)-(\d{2}))$/,
+    '%$1:$2:$3:$4:$5'
+  );
+}
+
 // same as above for ancestor ONTs
 function linkifyAncestors(ancestorstring)
 {
@@ -78,20 +104,28 @@ function linkifyAncestors(ancestorstring)
   var endstring = ""
   for (i in ancestors)
   {
-    linkstring += "<ul><li><a href=\"lex-ont?side=ont&amp;q=" + ancestors[i] + "#highlight\"" + (inFrames? 'target="ontology"' : '') + ">" + ancestors[i] + "</a>, "
+    linkstring += "<ul><li><a href=\"lex-ont?side=ont&amp;q=" + ancestors[i] + "#highlight\"" + (inFrames? 'target="ontology"' : '') + ">" + fixSenseKey(ancestors[i]) + "</a>, "
     endstring += "</li></ul>"
   }
   return linkstring + endstring
 }
 
 function setTargets() {
+  var links = document.getElementsByTagName("a")
   if (top.location.href != window.location.href) { // we're in frames
     inFrames = true
-    var links = document.getElementsByTagName("a")
     for (var i = 0; i < links.length; i++) {
       if (/lex-ont\?side=ont/.test(links[i].href)) {
         links[i].target = "ontology"
       }
+    }
+  }
+  // put WN sense keys back to their proper format
+  for (var i = 0; i < links.length; i++) {
+    var oldHTML = links[i].innerHTML;
+    var newHTML = fixSenseKey(oldHTML);
+    if (oldHTML != newHTML) {
+      links[i].innerHTML = newHTML;
     }
   }
 }
@@ -112,6 +146,14 @@ function setTargets() {
     </xsl:if>
    </input>
    Find mapped WN senses even for POS with native TRIPS senses
+  </label><br/>
+  <label>
+   <input type="checkbox" name="show-wn-senses-only-for-core-synsets" value="t" onchange="setClassVisible('wn', !this.checked)">
+    <xsl:if test="@show-wn-senses-only-for-core-synsets">
+     <xsl:attribute name="checked">checked</xsl:attribute>
+    </xsl:if>
+   </input>
+   Show WN senses only for core synsets
   </label>
  </form>
  <xsl:for-each select="WORD">
@@ -141,14 +183,21 @@ function setTargets() {
        </dt>
       </xsl:for-each>
       <xsl:for-each select="CLASS">
-       <dt>
-	<a href="lex-ont?side=ont&amp;q={@onttype}#highlight" style="color: #7f0000">ONT::<xsl:value-of select="@onttype" /></a>
+       <dt class="{@source}">
+	<a href="lex-ont?side=ont&amp;q={@onttype}#highlight" style="color: #7f0000">
+	 <xsl:choose>
+	  <xsl:when test="@source='trips'">ONT</xsl:when>
+	  <xsl:otherwise>WN</xsl:otherwise>
+	 </xsl:choose>
+	 <xsl:text>::</xsl:text>
+	 <xsl:value-of select="@onttype" />
+	</a>
 	(<a href="javascript:toggleVisible('{$pos}-{@onttype}-synset')" id="{$pos}-{@onttype}-synset-link">show synset</a>)
 	<span style="display: none" id="{$pos}-{@onttype}-synset"><xsl:value-of select="@words" /></span>
 	(<a href="javascript:toggleVisible('{$pos}-{@onttype}-ancestors')" id="{$pos}-{@onttype}-ancestors-link">show ancestors</a>)
 	<span style="display: none" id="{$pos}-{@onttype}-ancestors"><xsl:value-of select="@ancestors" /></span>
        </dt>
-       <dd>
+       <dd class="{@source}">
 	<xsl:if test="@gloss">
 	 Gloss: <xsl:value-of select="@gloss" /><br />
 	</xsl:if>

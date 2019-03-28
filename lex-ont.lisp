@@ -351,7 +351,8 @@
    intermediate synsets as extra ancestors. Also include the gloss from WN."
   (with-slots (ont-type synset sense-key wn-path) d
     (if (null synset)
-      xml ; in trips
+      ;; in trips
+      `(class :source "trips" ,@(cdr xml))
       ;; else in wordnet
       (let* ((old-ancestors (util:find-arg-in-act xml :ancestors))
              (wn-anc-ids
@@ -371,8 +372,11 @@
 		;; just in case, I'll put the | back here
 		(format nil "~{~a~^ | ~}"
 			 (slot-value synset 'wf::glosses)))
+	     (core-p (some #'wf::is-core-wordnet-sense
+			   (wf::sense-keys-for-synset synset)))
 	     )
-	`(class :onttype ,wn-class-id
+	`(class :source ,(if core-p "core-wn" "wn")
+	        :onttype ,wn-class-id
 		:words ,new-words
 		:ancestors ,new-ancestors
 		:gloss ,gloss
@@ -401,6 +405,8 @@
 	collect (subseq q (length prefix))
 	)
   )
+
+(defvar *show-wn-senses-only-for-core-synsets* nil)
 
 ;; Test cases:
 	; problems
@@ -461,6 +467,8 @@
 			      :modified ,(get-word-modified-date q)
 			      ,@(when lxm::*use-trips-and-wf-senses*
 				  '(:use-trips-and-wf-senses "T"))
+			      ,@(when *show-wn-senses-only-for-core-synsets*
+				  '(:show-wn-senses-only-for-core-synsets "T"))
 			      ("WORD" :name "not found")))
 		  ))
 	    ))
@@ -474,6 +482,8 @@
 		      :modified ,(get-word-modified-date q)
 		      ,@(when lxm::*use-trips-and-wf-senses*
 			  '(:use-trips-and-wf-senses "T"))
+		      ,@(when *show-wn-senses-only-for-core-synsets*
+		          '(:show-wn-senses-only-for-core-synsets "T"))
 		      ""))
 	  (dolist (lemma lemmas)
 	    (format s "~a"
@@ -732,6 +742,7 @@ $(document).ready(function(){
 (defun handle-lex-ont (msg query)
   (destructuring-bind (&key side ret q 
   		       use-trips-and-wf-senses
+		       show-wn-senses-only-for-core-synsets
 		       &allow-other-keys) query
     (reply-to-msg msg 'tell :content
       (let ((*package* wf::*wf-package-var*)) ; nip WF pkg problems in the bud
@@ -740,16 +751,20 @@ $(document).ready(function(){
 	    (cond
 	      ((equalp ret "autocomplete") (lex-autocomplete q))
 	      (t
-	        ;; temporarily set utawfs to requested value, saving old value
-		;; also temporarily set wfsl really high
+		;; temporarily set utawfs and swnsofcs to requested values,
+		;; saving old values; also temporarily set wfsl really high
 	        (let ((old-utawfs lxm::*use-trips-and-wf-senses*)
+		      (old-swnsofcs *show-wn-senses-only-for-core-synsets*)
 		      (old-wfsl lxm::*wf-sense-limit*))
 		  (setf lxm::*use-trips-and-wf-senses* 
-			(when use-trips-and-wf-senses t)
+			  (when use-trips-and-wf-senses t)
+			*show-wn-senses-only-for-core-synsets*
+			  (when show-wn-senses-only-for-core-synsets t)
 			lxm::*wf-sense-limit* 1000000)
 		  (unwind-protect (lex-xml q) ;; do the word lookup
-		    ;; reset utawfs to old value
+		    ;; reset utawfs, swnsofcs, and wfsl to old values
 		    (setf lxm::*use-trips-and-wf-senses* old-utawfs
+			  *show-wn-senses-only-for-core-synsets* old-swnsofcs
 		          lxm::*wf-sense-limit* old-wfsl))))
 	      ))
 	  ((equalp side "ont")
