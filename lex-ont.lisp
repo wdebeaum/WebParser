@@ -184,7 +184,14 @@
 (defun set-word-syms-from-strs (w)
   "Given a word structure with its str* slots set, set its sym* slots."
   (with-slots (strs str- str_ syms sym- sym_ gwd dw) w
-    (setf syms (mapcan #'parser::tokenize strs)
+    (setf syms (if (and (= 1 (length strs))
+                        (eql (- (length (car strs)) 1)
+			     (position #\- (car strs))))
+                 ;; looks like a prefix, so keep the final - unchanged
+		 (list (intern (string-upcase (car strs)) :w))
+		 ;; not a prefix, just use parser's tokenization
+                 (mapcan #'parser::tokenize strs)
+		 )
 	  sym- (intern (format nil "~{~a~^-~}" syms) :w)
 	  sym_ (intern (format nil "~{~a~^_~}" syms) :w)
 	  gwd  (if (= 1 (length syms)) (car syms) syms)
@@ -275,6 +282,7 @@
   pos ; TRIPS W:: pos symbol
   ont-type ; TRIPS ONT:: type symbol
   template ; TRIPS template name
+  nom-of ; word this def is a nominalization of (or nil)
   def-list ; original list form of the def from get-word-def
   (synset nil) ; wf::wordnet-synset (or nil if not from WordNet)
   (sense-key nil) ; sense key string with %: (or nil)
@@ -309,13 +317,16 @@
   (destructuring-bind (pct pos . feats)
       (fourth def-list)
       (declare (ignore pct))
-    (destructuring-bind (colon-star ont-type lemma-sym)
+    (destructuring-bind (colon-star &optional (ont-type colon-star) (lemma-sym ont-type))
         (second (assoc 'w::lf feats))
-	(declare (ignore colon-star))
       (let* ((w (make-word-from-string q))
              (l (make-word-from-symbol lemma-sym))
 	     (d (make-word-def :word w :lemma l :pos pos :ont-type ont-type
 			       :template (second (assoc 'w::template feats))
+			       :nom-of
+				 (let ((n (assoc 'w::nom-of feats)))
+				   (when n
+				     (make-word-from-anything (second n))))
 			       :def-list def-list))
              (gwflf-entry (list (word-gwd l) pos))
 	     (in-trips-p (member gwflf-entry (lxm::get-words-from-lf ont-type)
@@ -326,8 +337,11 @@
 	  (let* ((wn-pos (second (assoc pos *trips2wn-pos*)))
 	         ;; try the search word first
 		 (wn-word (word-str_ w))
-	         (word-synsets (wf::get-synsets wf::wm wn-word wn-pos)))
-	    (unless (maybe-set-word-def-synset d wn-word wn-pos word-synsets)
+	         (word-synsets (when wn-pos
+				 (wf::get-synsets wf::wm wn-word wn-pos))))
+	    (when (and word-synsets
+		       (not (maybe-set-word-def-synset d wn-word wn-pos
+						       word-synsets)))
 	      ;; search word failed, try morphy (like wf::get-all-synsets does,
 	      ;; but this way we can save which lemma actually worked)
 	      (loop with morphy-words =
@@ -427,7 +441,7 @@
 ;; "antinutrient" - in neither WN nor TRIPS, but we could separate "anti-" prefix and get "nutrient" from WN and TRIPS
 	; we don't have w::anti- defined
 ;; "homoiconic" - TRIPS has homo- and icon, WN has icon and iconic
-(defun lex-xml (q)
+(defun lex-xml (q &optional (q-orig q))
   (unless q (setf q "word"))
   (let* ((q-word (make-word-from-string q))
 	 (word-defs
@@ -453,7 +467,7 @@
 	     )
       ;; q not found; try recursing on versions of it with prefixes removed
       (loop for q-root in (remove-prefix q)
-            for response = (lex-xml q-root)
+            for response = (lex-xml q-root q-orig)
 	    unless (= 404 (second response))
 	    return response
 	    finally (return
@@ -463,7 +477,7 @@
 		  (format-xml-header s :xsl "../style/word.xsl"
 				       :doctype "WORDS" :dtd "../word.dtd")
 		  (format-xml s
-		    `("WORDS" :q ,q
+		    `("WORDS" :q ,q-orig
 			      :modified ,(get-word-modified-date q)
 			      ,@(when lxm::*use-trips-and-wf-senses*
 				  '(:use-trips-and-wf-senses "T"))
@@ -478,21 +492,38 @@
 	  (format-xml-header s :xsl "../style/word.xsl"
 			       :doctype "WORDS" :dtd "../word.dtd")
 	  (format-xml-start s
-	    `("WORDS" :q ,q
+	    `("WORDS" :q ,q-orig
 		      :modified ,(get-word-modified-date q)
 		      ,@(when lxm::*use-trips-and-wf-senses*
 			  '(:use-trips-and-wf-senses "T"))
 		      ,@(when *show-wn-senses-only-for-core-synsets*
 		          '(:show-wn-senses-only-for-core-synsets "T"))
 		      ""))
+	  (format s "~%")
 	  (dolist (lemma lemmas)
 	    (format s "~a"
 	      (weblex::convert-lisp-to-xml
 		(weblex::sort-pos-and-classes
 		  `(weblex::word :name ,(word-str_ lemma)
-		    ,@(loop for d in word-defs
-			    when (eq (word-sym_ lemma)
-				     (word-sym_ (word-def-lemma d)))
+		    ,@(loop with lemma-defs =
+		              (remove-if-not
+			        (lambda (d)
+				  (eq (word-sym_ lemma)
+				      (word-sym_ (word-def-lemma d))))
+				word-defs)
+			    with nom-morphs =
+			      (mapcar
+			        (lambda (no)
+				  `(weblex::morph :cat "nom" :from ,no))
+				(remove-duplicates
+				    (mapcan
+				      (lambda (d)
+					(when (word-def-nom-of d)
+					  (list (word-str_ (word-def-nom-of d))
+					  )))
+				      lemma-defs)
+				    :test #'string=))
+			    for d in lemma-defs
 			    collect
 			      (with-slots (pos ont-type template) d
 				`((weblex::pos :name ,pos
@@ -517,6 +548,7 @@
 				    `(weblex::pos :name ,pos
 				      ,@(weblex::get-morphs-xmls
 				          (word-gwd lemma) pos)
+				      ,@(when (eq pos 'w::n) nom-morphs)
 				      ,@(cdddr pos-xml))))
 				(reduce #'weblex::merge-pos-xml-lists xmls
 					:initial-value nil)))
