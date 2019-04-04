@@ -3,6 +3,21 @@
 
 <!-- this converts ONT::*.xml to a list item that can dynamically load its children -->
 
+<xsl:template name="sem">
+ <xsl:param name="id" />
+ <xsl:if test="FEATURES">
+  (<a id="{$id}-sem-link" href="javascript:toggleFeatures('{$id}')">show sem</a>)
+  <span id="{$id}-sem" style="display: none">
+   <br /><xsl:value-of select="@fltype" />
+   <ul>
+    <xsl:for-each select="FEATURES/@*">
+     <li><xsl:value-of select="name()" /> = <xsl:value-of select="." /></li>
+    </xsl:for-each>
+   </ul>
+  </span>
+ </xsl:if>
+</xsl:template>
+
 <xsl:template match="/ONTTYPE">
  <li id="{@name}">
   <xsl:choose>
@@ -26,22 +41,19 @@
     <br />
    </span>
   </xsl:if>
+  <xsl:for-each select="SEM">
+   <xsl:call-template name="sem">
+    <xsl:with-param name="id" select="../@name" />
+   </xsl:call-template>
+  </xsl:for-each>
   <xsl:if test="ARGUMENT">
    (<a id="{@name}-roles-link" href="javascript:toggleRoles('{@name}')">show roles</a>)
    <ul id="{@name}-roles" style="display: none">
     <xsl:for-each select="ARGUMENT">
      <li id="{../@name}-role-{@role}"><xsl:value-of select="@role" />
-      <xsl:if test="FEATURES">
-       (<a id="{../@name}-role-{@role}-sem-link" href="javascript:toggleFeatures('{../@name}-role-{@role}')">show sem</a>)
-       <span id="{../@name}-role-{@role}-sem" style="display: none">
-        <br /><xsl:value-of select="@fltype" />
-	<ul>
-	 <xsl:for-each select="FEATURES/@*">
-	  <li><xsl:value-of select="name()" /> = <xsl:value-of select="." /></li>
-	 </xsl:for-each>
-	</ul>
-       </span>
-      </xsl:if>
+      <xsl:call-template name="sem">
+       <xsl:with-param name="id"><xsl:value-of select="../@name" />-role-<xsl:value-of select="@role" /></xsl:with-param>
+      </xsl:call-template>
      </li>
     </xsl:for-each>
    </ul>
