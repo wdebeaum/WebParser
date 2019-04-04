@@ -3,6 +3,8 @@
 
 <!-- this converts ONT::*.xml to a list item that can dynamically load its children -->
 
+<xsl:param name="mode" select="'details'" />
+
 <xsl:template name="sem">
  <xsl:param name="id" />
  <xsl:if test="FEATURES">
@@ -18,7 +20,7 @@
  </xsl:if>
 </xsl:template>
 
-<xsl:template match="/ONTTYPE">
+<xsl:template match="/ONTTYPE" mode="tree">
  <li id="{@name}">
   <xsl:choose>
    <xsl:when test="CHILD">
@@ -26,50 +28,7 @@
    </xsl:when>
    <xsl:otherwise>- </xsl:otherwise>
   </xsl:choose>
-  <xsl:value-of select="@name" />
-  <xsl:if test="MAPPING[@to='wordnet']">
-   (<xsl:for-each select="MAPPING[@to='wordnet']">
-     <a href="{@url}"><xsl:value-of select="@name" /></a><xsl:if test="position() != last()">, </xsl:if>
-    </xsl:for-each>)
-  </xsl:if>
-  <xsl:if test="WORD">
-   (<a id="{@name}-words-link" href="javascript:toggleWords('{@name}')">show words</a>)
-   <span id="{@name}-words" style="display: none">
-    <xsl:for-each select="WORD">
-     <a href="lex-ont?side=lex&amp;q={@name}"><xsl:value-of select="@name" /></a><xsl:if test="position() != last()">, </xsl:if>
-    </xsl:for-each>
-    <br />
-   </span>
-  </xsl:if>
-  <xsl:for-each select="SEM">
-   <xsl:call-template name="sem">
-    <xsl:with-param name="id" select="../@name" />
-   </xsl:call-template>
-  </xsl:for-each>
-  <xsl:if test="ARGUMENT">
-   (<a id="{@name}-roles-link" href="javascript:toggleRoles('{@name}')">show roles</a>)
-   <ul id="{@name}-roles" style="display: none">
-    <xsl:for-each select="ARGUMENT">
-     <li id="{../@name}-role-{@role}"><xsl:value-of select="@role" />
-      <xsl:call-template name="sem">
-       <xsl:with-param name="id"><xsl:value-of select="../@name" />-role-<xsl:value-of select="@role" /></xsl:with-param>
-      </xsl:call-template>
-     </li>
-    </xsl:for-each>
-   </ul>
-  </xsl:if>
-  <xsl:if test="@definitions">
-   (<a id="{@name}-definitions-link" href="javascript:toggleDefinitions('{@name}')">show definitions</a>)
-   <span id="{@name}-definitions" style="display: none">
-    <xsl:value-of select="@definitions" />
-   </span>
-  </xsl:if>
-  <xsl:if test="@comment">
-   (<a id="{@name}-comment-link" href="javascript:toggleComment('{@name}')">show comment</a>)
-   <span id="{@name}-comment" style="display: none">
-    <xsl:value-of select="@comment" />
-   </span>
-  </xsl:if>
+  <a id="{@name}-link" href="lex-ont?side=ont&amp;ret=xml&amp;q={@name}" target="ont-type-details"><xsl:value-of select="@name" /></a>
   <xsl:if test="CHILD">
    <ul id="{@name}-children" style="display: none; list-style: none">
     <xsl:for-each select="CHILD">
@@ -80,6 +39,78 @@
   <!-- this is not shown by default so that only the top-level date is shown when we change its display style -->
   <div style="display: none" id="{@name}-modified">Last modified: <xsl:value-of select="@modified" /></div>
  </li>
+</xsl:template>
+
+<xsl:template match="/ONTTYPE" mode="details">
+ <html>
+  <head>
+   <title>ONT::<xsl:value-of select="@name" /></title>
+   <script type="text/javascript" src="../style/onttype.js"></script>
+  </head><body onload="setTargets()">
+  <h2><xsl:value-of select="@name" /></h2>
+  <xsl:if test="MAPPING[@to='wordnet']">
+   <div>(<xsl:for-each select="MAPPING[@to='wordnet']">
+     <a href="{@url}"><xsl:value-of select="@name" /></a><xsl:if test="position() != last()">, </xsl:if>
+    </xsl:for-each>)</div>
+  </xsl:if>
+  <xsl:if test="WORD">
+   <div>(<a id="{@name}-words-link" href="javascript:toggleWords('{@name}')">show words</a>)
+   <span id="{@name}-words" style="display: none">
+    <xsl:for-each select="WORD">
+     <a href="lex-ont?side=lex&amp;q={@name}"><xsl:value-of select="@name" /></a><xsl:if test="position() != last()">, </xsl:if>
+    </xsl:for-each>
+   </span>
+   </div>
+  </xsl:if>
+  <xsl:for-each select="SEM">
+   <div>
+   <xsl:call-template name="sem">
+    <xsl:with-param name="id" select="../@name" />
+   </xsl:call-template>
+   </div>
+  </xsl:for-each>
+  <xsl:if test="ARGUMENT">
+   <div>(<a id="{@name}-roles-link" href="javascript:toggleRoles('{@name}')">show roles</a>)
+   <ul id="{@name}-roles" style="display: none">
+    <xsl:for-each select="ARGUMENT">
+     <li id="{../@name}-role-{@role}"><xsl:value-of select="@role" />
+      <xsl:call-template name="sem">
+       <xsl:with-param name="id"><xsl:value-of select="../@name" />-role-<xsl:value-of select="@role" /></xsl:with-param>
+      </xsl:call-template>
+     </li>
+    </xsl:for-each>
+   </ul>
+   </div>
+  </xsl:if>
+  <xsl:if test="@definitions">
+   <div>(<a id="{@name}-definitions-link" href="javascript:toggleDefinitions('{@name}')">show definitions</a>)
+   <span id="{@name}-definitions" style="display: none">
+    <xsl:value-of select="@definitions" />
+   </span>
+   </div>
+  </xsl:if>
+  <xsl:if test="@comment">
+   <div>(<a id="{@name}-comment-link" href="javascript:toggleComment('{@name}')">show comment</a>)
+   <span id="{@name}-comment" style="display: none">
+    <xsl:value-of select="@comment" />
+   </span>
+   </div>
+  </xsl:if>
+  <xsl:if test="@modified">
+   <div>Last modified: <xsl:value-of select="@modified" /></div>
+  </xsl:if>
+ </body></html>
+</xsl:template>
+
+<xsl:template match="/ONTTYPE">
+ <xsl:choose>
+  <xsl:when test="$mode='tree'">
+   <xsl:apply-templates select="." mode="tree" />
+  </xsl:when>
+  <xsl:otherwise>
+   <xsl:apply-templates select="." mode="details" />
+  </xsl:otherwise>
+ </xsl:choose>
 </xsl:template>
 
 </xsl:stylesheet>

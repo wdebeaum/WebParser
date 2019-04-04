@@ -756,6 +756,7 @@ $(document).ready(function(){
   window.location.hash = highlighted;
   document.getElementById(highlighted).style.background = '#FFFF7F'
   document.getElementById('root-modified').style.display = ''
+  document.getElementById(highlighted + '-link').click();
 });
 " ancestors highlighted))))))))))
 
@@ -766,7 +767,10 @@ $(document).ready(function(){
 <HTML><HEAD><TITLE>Browse TRIPS+WN Lexicon and Ontology</TITLE></HEAD>
 <FRAMESET cols=\"50%, 50%\">
  <FRAME src=\"lex-ont?side=lex\" name=\"lexicon\">
- <FRAME src=\"lex-ont?side=ont\" name=\"ontology\">
+ <FRAMESET rows=\"50%, 50%\">
+  <FRAME src=\"lex-ont?side=ont\" name=\"ontology\">
+  <FRAME src=\"lex-ont?side=ont&ret=xml&q=root\" name=\"ont-type-details\">
+ </FRAMESET>
 </FRAMESET>
 </HTML>
 "))
