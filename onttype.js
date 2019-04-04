@@ -75,6 +75,10 @@ function toggleRoles(onttype) {
   genericToggle('roles', onttype)
 }
 
+function toggleDefinitions(onttype) {
+  genericToggle('definitions', onttype)
+}
+
 function toggleComment(onttype) {
   genericToggle('comment', onttype)
 }

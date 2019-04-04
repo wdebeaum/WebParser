@@ -58,6 +58,12 @@
     </xsl:for-each>
    </ul>
   </xsl:if>
+  <xsl:if test="@definitions">
+   (<a id="{@name}-definitions-link" href="javascript:toggleDefinitions('{@name}')">show definitions</a>)
+   <span id="{@name}-definitions" style="display: none">
+    <xsl:value-of select="@definitions" />
+   </span>
+  </xsl:if>
   <xsl:if test="@comment">
    (<a id="{@name}-comment-link" href="javascript:toggleComment('{@name}')">show comment</a>)
    <span id="{@name}-comment" style="display: none">
