@@ -815,11 +815,11 @@ $(document).ready(function(){
    \"http://www.w3.org/TR/html4/frameset.dtd\">
 <HTML><HEAD><TITLE>Browse TRIPS+WN Lexicon and Ontology</TITLE></HEAD>
 <FRAMESET cols=\"50%, 50%\">
- <FRAME src=\"lex-ont?side=lex\" name=\"lexicon\">
  <FRAMESET rows=\"50%, 50%\">
-  <FRAME src=\"lex-ont?side=ont\" name=\"ontology\">
+  <FRAME src=\"lex-ont?side=lex\" name=\"lexicon\">
   <FRAME src=\"lex-ont?side=ont&ret=xml&q=root\" name=\"ont-type-details\">
  </FRAMESET>
+ <FRAME src=\"lex-ont?side=ont\" name=\"ontology\">
 </FRAMESET>
 </HTML>
 "))
