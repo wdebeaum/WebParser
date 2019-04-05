@@ -70,8 +70,29 @@
     )
   )
 
-(defun lex-autocomplete (q)
-  `(http 200 :content-type "text/plain; charset=utf-8" :content ))
+(defun lex-autocomplete (q limit)
+  (let (results)
+    ;; get matches in our lexicon first
+    (loop for bf in (lxm::lexicon-db-base-forms lxm::*lexicon-data*)
+	  for w = (make-word-from-anything bf)
+	  while (or (not limit) (< (length results) limit))
+	  when (or (search q (word-str  w) :test #'string-equal)
+		   (search q (word-str_ w) :test #'string-equal)
+		   (search q (word-str- w) :test #'string-equal))
+	  do (push (word-str_ w) results))
+    ;; then if there aren't enough already, try getting WN lemmas
+    (loop for pos being the hash-keys of (slot-value wf::wm 'wf::indices)
+            using (hash-value index)
+	  while (or (not limit) (< (length results) limit))
+	  do
+      (loop for lemma being the hash-keys of index
+            for w = (make-word-from-string lemma)
+	    when (or (search q (word-str  w) :test #'string-equal)
+		     (search q (word-str_ w) :test #'string-equal)
+		     (search q (word-str- w) :test #'string-equal))
+	    do (push (word-str_ w) results)))
+    `(http 200 :content-type "text/plain; charset=utf-8" :content
+       ,(format nil "~(~{~a~%~}~)" (nreverse results)))))
 
 (defun get-word-modified-date (word)
   (if (name-p word)
@@ -559,8 +580,31 @@
       )
     ))
 
-(defun ont-autocomplete (q)
-  `(http 200 :content-type "text/plain; charset=utf-8" :content ))
+(defun ont-autocomplete (q limit)
+  (let (results)
+    ;; get matches in our ontology first
+    (loop for ont-type being the hash-keys of
+	    (om::ling-ontology-lf-table om::*lf-ontology*)
+	  while (or (not limit) (< (length results) limit))
+	  when (search q (symbol-name ont-type) :test #'string-equal)
+	  do (push ont-type results))
+    ;; then if there aren't enough already, try getting WN synsets
+    (loop for pos being the hash-keys of (slot-value wf::wm 'wf::indices)
+            using (hash-value index)
+	  while (or (not limit) (< (length results) limit))
+	  do
+      (loop for lemma being the hash-keys of index using (hash-value entry) do
+        (loop for sso in (slot-value entry 'wf::synset-offsets)
+	      for ss = (wf::get-synset wf::wm pos sso) ; cached
+	      for sk = (first (wf::sense-keys-for-synset ss))
+	      for id = (sense-key-to-id sk)
+	      while (or (not limit) (< (length results) limit))
+	      when (and (or (search q id :test #'string-equal)
+			    (search q sk :test #'string-equal))
+			(car (synset-to-ont-types ss)))
+	      do (push id results))))
+    `(http 200 :content-type "text/plain; charset=utf-8" :content
+       ,(format nil "~(~{~a~%~}~)" (nreverse results)))))
 
 (defun arguments-has-all-roles (arguments roles)
   (every
@@ -621,7 +665,12 @@
               :src "../jquery/jquery.autocomplete.js" "")
       (script :type "text/javascript" "
 $(document).ready(function(){
-$('#search-input').autocomplete('lex-ont?side=ont&ret=autocomplete');
+// work around xml escaping of this:
+//$('#search-input').autocomplete('lex-ont?side=ont&ret=autocomplete');
+var ont_ac_url = new URL('lex-ont', document.baseURI);
+ont_ac_url.searchParams.set('side', 'ont');
+ont_ac_url.searchParams.set('ret', 'autocomplete');
+$('#search-input').autocomplete(ont_ac_url.href);
 loadONTLI('root');
 });
 ")
@@ -776,16 +825,18 @@ $(document).ready(function(){
 "))
 
 (defun handle-lex-ont (msg query)
-  (destructuring-bind (&key side ret q 
+  (destructuring-bind (&key side ret q limit
   		       use-trips-and-wf-senses
 		       show-wn-senses-only-for-core-synsets
 		       &allow-other-keys) query
+    (when (and limit (every #'digit-char-p limit))
+      (setf limit (parse-integer limit)))
     (reply-to-msg msg 'tell :content
       (let ((*package* wf::*wf-package-var*)) ; nip WF pkg problems in the bud
 	(cond
 	  ((equalp side "lex")
 	    (cond
-	      ((equalp ret "autocomplete") (lex-autocomplete q))
+	      ((equalp ret "autocomplete") (lex-autocomplete q limit))
 	      (t
 		;; temporarily set utawfs and swnsofcs to requested values,
 		;; saving old values; also temporarily set wfsl really high
@@ -805,7 +856,7 @@ $(document).ready(function(){
 	      ))
 	  ((equalp side "ont")
 	    (cond
-	      ((equalp ret "autocomplete") (ont-autocomplete q))
+	      ((equalp ret "autocomplete") (ont-autocomplete q limit))
 	      ((equalp ret "types-for-roles") (ont-types-for-roles q))
 	      ((equalp ret "xml") (ont-xml q))
 	      (t (ont-html q))

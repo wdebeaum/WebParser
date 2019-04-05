@@ -28,7 +28,7 @@
   <script>
 <![CDATA[
   $(document).ready(function(){
-    $("#search-input").autocomplete("../cgi/autocomplete?package=W");
+    $("#search-input").autocomplete("lex-ont?side=lex&ret=autocomplete");
   });
 ]]>
   </script>
