@@ -695,25 +695,38 @@ loadONTLI('root');
     ))
 
 (defun ont-xml (q)
-  (let ((sk (id-to-sense-key q)))
+  (let ((sk (id-to-sense-key q))
+	(lf-table (om::ling-ontology-lf-table om::*lf-ontology*)))
     (cond
       (sk
-        (let ((ss (wf::get-synset-from-sense-key wf::wm sk)))
+        (let* ((ss (wf::get-synset-from-sense-key wf::wm sk))
+	       (anc-ont-type (first (synset-to-ont-types ss)))
+	       (anc-desc (when anc-ont-type (gethash anc-ont-type lf-table)))
+	       (anc-sem (when anc-desc (slot-value anc-desc 'om::sem)))
+	       (anc-args (when anc-desc (slot-value anc-desc 'om::arguments))))
 	  (if ss
 	    `(http 200
 	      :content-type "text/xml; charset=utf-8"
 	      :content ,(with-output-to-string (s)
 	        (format-xml-header s :xsl "../style/onttype.xsl"
 				     :doctype "ONTTYPE" :dtd "../onttype.dtd")
-		(format-xml s
-		  `("ONTTYPE" :name ,q
+		;; NOTE: we don't use "(format-xml s" here because we want
+		;; upper case tag names
+		(format s "~a" (weblex::convert-lisp-to-xml
+		  `(ONTTYPE :name ,q
+		     ;; sem
+		     ,@(when anc-sem
+			 (list (weblex::feature-list-xml anc-sem)))
+		     ;; arguments
+		     ,@(when anc-args
+		         (mapcar #'weblex::sem-argument-xml anc-args))
 		     ;; words (except stoplisted)
 		     ,@(mapcan
 		         (lambda (lemma)
 			   (unless (wf::stoplist-p
 				       (first (wf::sense-key-for-word-and-synset
 						  lemma ss)))
-			     `(("WORD" :name ,lemma))))
+			     `((WORD :name ,lemma))))
 			 (wf::wn-lemmas ss))
 		     ;; children (except stoplisted or mapped elsewhere)
 		     ,@(let ((ont-types (synset-to-ont-types ss)))
@@ -728,19 +741,18 @@ loadONTLI('root');
 			       (unless (or (every #'wf::stoplist-p child-sks)
 					   (null (intersection ont-types
 							       child-ots)))
-				 `(("CHILD" :name ,child-id)))))
+				 `((CHILD :name ,child-id)))))
 			   (wf::get-pointers-by-relationship wf::wm ss
 			     (if (eq 'wf::|a| (wf::get-ss-type ss))
 			       "&" ; similar to (satellite of head adj)
 			       "~" ; hyponym
 			       ))
-			   ))))
+			   )))))
 	        ))
 	    `(http 404 :content-type "text/plain" :content "not found"))))
       (q
 	(let* ((ont-type (intern (string-upcase q) :ONT))
 	       (name (string-downcase q))
-	       (lf-table (om::ling-ontology-lf-table om::*lf-ontology*))
 	       (desc (gethash ont-type lf-table)))
 	  (if desc
 	    (let ((xml (weblex::lf-description-xml desc)))
