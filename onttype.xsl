@@ -21,7 +21,7 @@
 </xsl:template>
 
 <xsl:template match="/ONTTYPE" mode="tree">
- <li id="{@name}">
+ <li id="{@name}" class="{@source}">
   <xsl:choose>
    <xsl:when test="CHILD">
     <a id="{@name}-children-link" href="javascript:toggleChildren('{@name}')" style="text-decoration: none">&gt; </a>
@@ -48,6 +48,7 @@
    <script type="text/javascript" src="../style/onttype.js"></script>
   </head><body onload="setTargets()">
   <h2><xsl:value-of select="@name" /></h2>
+  <div>Source: <xsl:value-of select="@source" /></div>
   <xsl:if test="MAPPING[@to='wordnet']">
    <div>(<xsl:for-each select="MAPPING[@to='wordnet']">
      <a href="{@url}"><xsl:value-of select="@name" /></a><xsl:if test="position() != last()">, </xsl:if>

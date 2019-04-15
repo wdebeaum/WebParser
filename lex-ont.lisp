@@ -379,6 +379,34 @@
 		    ))))
 	d))))
 
+(defun synset-core-p (ss)
+  (some #'wf::is-core-wordnet-sense (wf::sense-keys-for-synset ss)))
+
+(defvar *core-wordnet-ancestors* nil)
+
+(defun synset-core-ancestor-p (ss)
+  (unless *core-wordnet-ancestors*
+    ;; initialize to a hash table mapping all ancestors of core wordnet synsets
+    ;; (including the core synsets themselves) to t
+    ;; (but use (lex-filenum . offset) as keys instead of the synset object
+    ;; itself, because apparently those aren't always equalp?)
+    (setf *core-wordnet-ancestors* (make-hash-table :test #'equalp))
+    (loop for sk being the hash-keys of wf::core-wordnet-sense-keys
+          for core-ss = (wf::get-synset-from-sense-key wf::wm sk)
+	  for ancestorses =
+	    (when core-ss ; WTF, WN? why are there "core" senses that aren't even in WN, like annual%3:01:00::?
+	      (synset-to-ancestorses core-ss))
+	  do (dolist (ancestors ancestorses)
+	       (loop for ancestor in ancestors
+	             for key = (cons (slot-value ancestor 'wf::lex-filenum)
+				     (slot-value ancestor 'wf::offset))
+		     do (setf (gethash key *core-wordnet-ancestors*) t)))
+	  )
+    )
+  (gethash (cons (slot-value ss 'wf::lex-filenum)
+		 (slot-value ss 'wf::offset))
+	   *core-wordnet-ancestors*))
+
 (defun maybe-wordnetify-sense-xml (d xml)
   "If the sense was looked up from WordNet instead of our lexicon, return a new
    version of the sense XML with the WordNet sense that was used to map it to
@@ -407,10 +435,8 @@
 		;; just in case, I'll put the | back here
 		(format nil "~{~a~^ | ~}"
 			 (slot-value synset 'wf::glosses)))
-	     (core-p (some #'wf::is-core-wordnet-sense
-			   (wf::sense-keys-for-synset synset)))
 	     )
-	`(class :source ,(if core-p "core-wn" "wn")
+	`(class :source ,(if (synset-core-p synset) "core-wn" "wn")
 	        :onttype ,wn-class-id
 		:words ,new-words
 		:ancestors ,new-ancestors
@@ -652,7 +678,7 @@
   `(html
     (head
       (title "TRIPS+WN Ontology Browser")
-      (style :type "text/css" "ul { padding-left: 1em; }")
+      (style :type "text/css" ".wn {} ul { padding-left: 1em; }")
       (script :type "text/javascript" :src "../style/onttype.js" "")
       (script :type "text/javascript" :src "../jquery/jquery-latest.js" "")
       (link :rel "stylesheet" :href "../jquery/jquery.autocomplete.css"
@@ -688,6 +714,9 @@ loadONTLI('root');
 	  (input :type "text" :size "40" :name "roles")
 	  (input :type "submit" :value "Filter by roles")
 	  ))
+      (label
+        (input :type "checkbox" :onchange "toggleCoreWN(this.checked);")
+	" Show only core WN synsets and their ancestors")
       (ul :style "list-style: none; padding-left: 0em"
 	(li :id "root"))
       ,@footer
@@ -714,6 +743,12 @@ loadONTLI('root');
 		;; upper case tag names
 		(format s "~a" (weblex::convert-lisp-to-xml
 		  `(ONTTYPE :name ,q
+		     :source
+		       ,(cond
+		          ((synset-core-p ss) "core-wn")
+			  ((synset-core-ancestor-p ss) "core-wn-ancestor")
+			  (t "wn")
+			  )
 		     ;; sem
 		     ,@(when anc-sem
 			 (list (weblex::feature-list-xml anc-sem)))
@@ -770,6 +805,8 @@ loadONTLI('root');
 		      `(weblex::child :name
 			 ,(sense-key-to-id (weblex::getk m :name))))
 		    mappings))))
+	      ;; add :source "trips"
+	      (rplacd (cddr xml) (cons :source (cons "trips" (cdddr xml))))
 	      `(http 200
 		:content-type "text/xml; charset=utf-8"
 		:content ,(with-output-to-string (s)

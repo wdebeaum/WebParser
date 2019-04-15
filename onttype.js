@@ -61,6 +61,10 @@ function toggleFeatures(id) {
   genericToggle('sem', id)
 }
 
+function toggleCoreWN(hide) {
+  document.styleSheets[0].cssRules[0].style.display = (hide ? 'none' : '');
+}
+
 // show the children of the given onttype, loading them if necessary
 function showChildren(onttype) {
   var children = document.getElementById(onttype + "-children")
