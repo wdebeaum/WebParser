@@ -395,7 +395,10 @@
           for core-ss = (wf::get-synset-from-sense-key wf::wm sk)
 	  for ancestorses =
 	    (when core-ss ; WTF, WN? why are there "core" senses that aren't even in WN, like annual%3:01:00::?
-	      (synset-to-ancestorses core-ss))
+	      (if (eq 'wf::|s| (wf::get-ss-type core-ss)) ; satellite adj
+		`((,(wf::get-head-adjective wf::wm core-ss) ; head is anc
+		   ,core-ss))
+		(synset-to-ancestorses core-ss)))
 	  do (dolist (ancestors ancestorses)
 	       (loop for ancestor in ancestors
 	             for key = (cons (slot-value ancestor 'wf::lex-filenum)
