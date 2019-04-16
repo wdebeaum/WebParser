@@ -110,7 +110,7 @@
   (substitute #\- #\: (substitute #\- #\% sk)))
 
 (defun id-to-sense-key (id)
-  "Inverse of sense-key-to-ncname, if id was a well-formed sense key; otherwise
+  "Inverse of sense-key-to-id, if id was a well-formed sense key; otherwise
    nil."
   (and (>= (count #\- id) 5) ; has 5 fields prefixed with -
        (destructuring-bind (ss-type lex-filenum lex-id head head-id)
@@ -136,6 +136,53 @@
 	        (format nil "~a%~{~a~^:~}"
 		    lemma (list ss-type lex-filenum lex-id head head-id)))
 	      ))))
+
+(defun proper-sense-key (q)
+  "If q looks like some kind of sense key, return a corresponding properly
+   formatted sense key; otherwise return nil."
+  (let* ((pct (position #\% q))
+         (c1 (when pct (position #\: q :start pct)))
+         (c2 (when c1 (position #\: q :start (1+ c1))))
+         (c3 (when c2 (position #\: q :start (1+ c2))))
+         (c4 (when c3 (position #\: q :start (1+ c3)))))
+    (or
+      (cond
+	;; check that we at least have lemma%1:23:45
+	((not (and c2 ; got up to the second colon
+		   ;; fields are the right size
+		   (= 2 (- c1 pct)) (= 3 (- c2 c1)) (>= 3 (- (length q) c2))
+		   ;; ss-type is in 1-5
+		   (member (char q (1+ pct)) '(#\1 #\2 #\3 #\4 #\5))
+		   ;; other numeric fields have digits in them
+		   (every #'digit-char-p
+			  (mapcar (lambda (i) (char q i))
+				  (list (1+ c1) (+ 2 c1)
+					(1+ c2) (+ 2 c2)
+					)))))
+	  nil)
+	((null c4) ; just missing final :: ?
+	  (if (= 3 (- (length q) c2))
+	    (concatenate 'string q "::")
+	    nil)) ; junk after lex-id field, maybe not a sense key
+	((and (= c3 (1+ c2)) (= c4 (1+ c3)) (= (length q) (1+ c4))) ; have ::
+	  q)
+	;; have satellite adj fields, check head-id is a 2-digit number
+	((not (and (= 3 (- (length q) c4))
+	           (digit-char-p (char q (1+ c4)))
+		   (digit-char-p (char q (+ 2 c4)))))
+	  nil)
+	((char= #\3 (char q (1+ pct))) ;; wrong ss-type (head instead of sat.)
+	  (concatenate 'string
+	      (subseq q 0 (1+ pct))
+	      "5"
+	      (subseq q (+ 2 pct))))
+	((char= #\5 (char q (1+ pct))) ;; right ss-type (satellite)
+	  q)
+	(t nil) ;; very wrong ss-type (noun, verb, or adv)
+	)
+      ;; if all else fails, try to convert it back from an ID
+      (id-to-sense-key q)
+      )))
 
 (defun synset-to-ancestorses (ss)
   "Get the lists of ancestors of the given synset (including the synset
@@ -727,7 +774,7 @@ loadONTLI('root');
     ))
 
 (defun ont-xml (q)
-  (let ((sk (id-to-sense-key q))
+  (let ((sk (proper-sense-key q))
 	(lf-table (om::ling-ontology-lf-table om::*lf-ontology*)))
     (cond
       (sk
@@ -824,7 +871,7 @@ loadONTLI('root');
       )))
 
 (defun ont-html (q)
-  (let* ((sk (when q (id-to-sense-key q)))
+  (let* ((sk (when q (proper-sense-key q)))
          (ss (when sk (wf::get-synset-from-sense-key wf::wm sk)))
          (ont-type (cond (ss (first (synset-to-ont-types ss)))
 		         (q (intern (string-upcase q) :ONT))))

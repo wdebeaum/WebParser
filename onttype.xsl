@@ -44,9 +44,15 @@
 <xsl:template match="/ONTTYPE" mode="details">
  <html>
   <head>
-   <title>ONT::<xsl:value-of select="@name" /></title>
+   <title>
+    <xsl:choose>
+     <xsl:when test="@source='trips'"><xsl:text>ONT::</xsl:text></xsl:when>
+     <xsl:otherwise><xsl:text>WN::</xsl:text></xsl:otherwise>
+    </xsl:choose>
+    <xsl:value-of select="@name" />
+   </title>
    <script type="text/javascript" src="../style/onttype.js"></script>
-  </head><body onload="setTargets()">
+  </head><body onload="setTargets(); fixSenseKeyElement(document.getElementsByTagName('title')[0]); fixSenseKeyElement(document.getElementsByTagName('h2')[0]);">
   <h2><xsl:value-of select="@name" /></h2>
   <div>Source: <xsl:value-of select="@source" /></div>
   <xsl:if test="MAPPING[@to='wordnet']">

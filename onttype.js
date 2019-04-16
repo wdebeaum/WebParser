@@ -25,6 +25,7 @@ function loadONTLI(onttype) {
   } else {
     throw "Unsupported browser"
   }
+  fixSenseKeyElement(document.getElementById(onttype + '-link'))
   setTargets()
 }
 
@@ -180,3 +181,14 @@ function filterByRoles() {
   return false
 }
 
+function fixSenseKey(sk) {
+  return sk.replace(
+    /-([1-5])-(\d{2})-(\d{2})-(?:-|(\w+)-(\d{2}))$/,
+    '%$1:$2:$3:$4:$5'
+  );
+}
+
+// fix sense key in an element's content
+function fixSenseKeyElement(ske) {
+  ske.innerHTML = fixSenseKey(ske.innerHTML);
+}
