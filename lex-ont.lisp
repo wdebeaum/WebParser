@@ -657,30 +657,37 @@
     ))
 
 (defun ont-autocomplete (q limit)
-  (let (results)
+  (let* ((first-word-end (or (position-if-not #'alpha-char-p q) (length q)))
+	 (first-word (when (< 0 first-word-end) (subseq q 0 first-word-end)))
+	 results)
     ;; get matches in our ontology first
     (loop for ont-type being the hash-keys of
 	    (om::ling-ontology-lf-table om::*lf-ontology*)
 	  while (or (not limit) (< (length results) limit))
 	  when (search q (symbol-name ont-type) :test #'string-equal)
 	  do (push ont-type results))
-    ;; then if there aren't enough already, try getting WN synsets
-    (loop for pos being the hash-keys of (slot-value wf::wm 'wf::indices)
-            using (hash-value index)
-	  while (or (not limit) (< (length results) limit))
-	  do
-      (loop for lemma being the hash-keys of index using (hash-value entry) do
-        (loop for sso in (slot-value entry 'wf::synset-offsets)
-	      for ss = (wf::get-synset wf::wm pos sso) ; cached
-	      for sk = (first (wf::sense-keys-for-synset ss))
-	      for id = (sense-key-to-id sk)
-	      while (or (not limit) (< (length results) limit))
-	      when (and (or (search q id :test #'string-equal)
-			    (search q sk :test #'string-equal))
-			(car (synset-to-ont-types ss))) ; FIXME? satellites
-	      do (push id results))))
-    `(http 200 :content-type "text/plain; charset=utf-8" :content
-       ,(format nil "~(~{~a~%~}~)" (nreverse results)))))
+    ;; then if there aren't enough already, and we have a word to search for,
+    ;; try getting WN synsets
+    (when first-word
+      (loop for pos being the hash-keys of (slot-value wf::wm 'wf::indices)
+	      using (hash-value index)
+	    while (or (not limit) (< (length results) limit))
+	    ; TODO? detect ss-type from q and use it to limit search by POS
+	    do
+	(loop for lemma being the hash-keys of index using (hash-value entry)
+	      when (search first-word lemma :test #'string-equal)
+	      do
+	  (loop for sso in (slot-value entry 'wf::synset-offsets)
+		for ss = (wf::get-synset wf::wm pos sso) ; cached
+		for sk = (first (wf::sense-keys-for-synset ss))
+		for id = (sense-key-to-id sk)
+		while (or (not limit) (< (length results) limit))
+		when (and (or (search q id :test #'string-equal)
+			      (search q sk :test #'string-equal))
+			  (car (synset-to-ont-types ss))) ; FIXME? satellites
+		do (push id results)))))
+  `(http 200 :content-type "text/plain; charset=utf-8" :content
+     ,(format nil "~(~{~a~%~}~)" (nreverse results)))))
 
 (defun arguments-has-all-roles (arguments roles)
   (every
