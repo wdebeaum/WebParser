@@ -150,7 +150,7 @@
 	;; check that we at least have lemma%1:23:45
 	((not (and c2 ; got up to the second colon
 		   ;; fields are the right size
-		   (= 2 (- c1 pct)) (= 3 (- c2 c1)) (>= 3 (- (length q) c2))
+		   (= 2 (- c1 pct)) (= 3 (- c2 c1)) (<= 3 (- (length q) c2))
 		   ;; ss-type is in 1-5
 		   (member (char q (1+ pct)) '(#\1 #\2 #\3 #\4 #\5))
 		   ;; other numeric fields have digits in them
@@ -164,7 +164,7 @@
 	  (if (= 3 (- (length q) c2))
 	    (concatenate 'string q "::")
 	    nil)) ; junk after lex-id field, maybe not a sense key
-	((and (= c3 (1+ c2)) (= c4 (1+ c3)) (= (length q) (1+ c4))) ; have ::
+	((and (= c3 (+ 3 c2)) (= c4 (1+ c3)) (= (length q) (1+ c4))) ; have ::
 	  q)
 	;; have satellite adj fields, check head-id is a 2-digit number
 	((not (and (= 3 (- (length q) c4))
@@ -677,7 +677,7 @@
 	      while (or (not limit) (< (length results) limit))
 	      when (and (or (search q id :test #'string-equal)
 			    (search q sk :test #'string-equal))
-			(car (synset-to-ont-types ss)))
+			(car (synset-to-ont-types ss))) ; FIXME? satellites
 	      do (push id results))))
     `(http 200 :content-type "text/plain; charset=utf-8" :content
        ,(format nil "~(~{~a~%~}~)" (nreverse results)))))
