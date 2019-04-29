@@ -63,6 +63,7 @@
 	 <textarea name="input-terms" id="input-terms" placeholder="Enter a Lispy list of native tags without :start/:end."><xsl:value-of select="@input-terms" /></textarea></label>
      </div>
     </form>
+    <xsl:call-template name="hyps-form" />
     <xsl:apply-templates />
     <xsl:call-template name="footer" />
    </body>

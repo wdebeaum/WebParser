@@ -2,6 +2,11 @@ h2 { font-size: large }
 
 select { margin-right: 2em }
 
+input[type='number'] {
+  width: 3em;
+  margin-right: 2em;
+}
+
 table.tags {
   border-collapse: collapse;
   margin-bottom: 1em;

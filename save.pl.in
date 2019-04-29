@@ -1,0 +1,38 @@
+#!/usr/bin/perl -T
+
+use POSIX qw(strftime);
+use CGI;
+$CGI::POST_MAX = 10*1024*1024; # 10MB
+my $q = CGI->new;
+print $q->header(-type => 'text/html', -charset => 'UTF-8');
+
+eval {
+  $q->remote_user() =~ /^\w+$/ or die "invalid or missing user name";
+  my $user = $&;
+  my $judgement = $q->param('judgement');
+  my $correct_hyp;
+  if ($judgement eq 'this hypothesis is correct') {
+    $q->param('hyp') =~ /^\d+$/ or die "expected a non-negative integer in hyp";
+    $correct_hyp = $&;
+  } elsif ($judgement eq 'all hypotheses are incorrect') {
+    $correct_hyp = 'none';
+  } else {
+    die "invalid judgement";
+  }
+  $q->param('results') =~ /^<\?xml .*?<trips-parser-output([^>]+)>.*$/s or die "expected a trips-parser-output XML file in results";
+  my ($results, $attrs) = ($&, $1);
+  $results =~ /<\/trips-parser-output>\s*$/ or die "missing closing tag of trips-parser-output, or there is junk at the end of results";
+  $attrs =~ / system="(\w+)"/ or die "missing system attribute on trips-parser-output element in results";
+  my $system = $1;
+  $attrs =~ / input="([^"]+)"/ or die "missing input attribute on trips-parser-output element in results";
+  my $input = $1;
+  $input =~ s/[^\w-]+/_/g;
+  $input = substr($input, 0, 40);
+  my $timestamp = strftime("%Y%m%dT%H%M%S", localtime());
+  my $filename = "$timestamp-$system-$user-$correct_hyp-$input.xml";
+  my $www_dir = 'WWW_DIR';
+  open R, ">$www_dir/saved/$filename" or die "failed to open file: $@";
+  print R $results;
+  close R;
+  print "<!DOCTYPE html>\n<html><head><title>Saved</title></head><body><p>Saved $system parsing results, with $user" . "'s judgement that the correct hypothesis was: $correct_hyp. Results may be reviewed here: <a href=\"../saved/$filename\">$filename</a>. That page won't let you parse anything new; use the back button to get back to the real parser web interface.</p></body></html>";
+} || print "<!DOCTYPE html>\n<html><head><title>Error saving judgement</title></head><body>Error saving judgement: <pre>$@</pre></body></html>";

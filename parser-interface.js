@@ -9,6 +9,7 @@ var lfformat;
 var debugCheckbox;
 var debugDiv;
 var displayCSSRules;
+var hypStyleSheet;
 
 function initVars() {
   extscontents = document.getElementById("extscontents");
@@ -20,6 +21,22 @@ function initVars() {
   debugCheckbox = document.getElementById("debug-checkbox");
   debugDiv = document.getElementById("debug-div");
   displayCSSRules = document.styleSheets[0].cssRules;
+  hypStyleSheet = document.styleSheets[1];
+}
+
+function initHypDisplay() {
+  for (var i = 0; document.getElementsByClassName("hyp-" + i).length > 0; i++) {
+    hypStyleSheet.insertRule(
+      ".hyp-" + i + ((i == 0) ? " { }" : " { display: none; }"),
+      hypStyleSheet.cssRules.length
+    );
+  }
+}
+
+function displayHyp(hyp) {
+  for (var i = 0; i < hypStyleSheet.cssRules.length; i++) {
+    hypStyleSheet.cssRules[i].style.display = ((i == hyp) ? '' : 'none');
+  }
 }
 
 function setDisplay(node, displayOn) {
@@ -187,6 +204,7 @@ function dotsToSVG() {
 
 function bodyLoaded() {
   initVars();
+  initHypDisplay();
   downcaseHack();
   setAllDisplay();
   dotsToSVG();

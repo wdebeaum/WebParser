@@ -132,6 +132,7 @@
 			    senses-only-for-penn-poss
 			    (split-mode "split-clauses")
 			    semantic-skeleton-scoring
+			    number-parses-desired
 			    trace-level
 			    rule-set
 			    &allow-other-keys
@@ -184,24 +185,33 @@
 		   (list :split-mode
 			 (intern (string-upcase split-mode) :keyword)))
 		 :parser-options
-		   ,(when (eq :step trips::*trips-system*)
-		     `((parser::*semantic-skeleton-scoring-enabled*
-			  ,(cond
-			    ;; when just loading the initial page, use the
-			    ;; default setting
-			    ((null input)
-			      (init-original-parser-options)
-			      (second (assoc 'parser::*semantic-skeleton-scoring-enabled* *original-parser-options*)))
-			    ;; otherwise, obey the checkbox
-			    (semantic-skeleton-scoring t)
-			    (t nil)
-			    ))))
+		   (
+		     ,@(when (eq :step trips::*trips-system*)
+		       `((parser::*semantic-skeleton-scoring-enabled*
+			    ,(cond
+			      ;; when just loading the initial page, use the
+			      ;; default setting
+			      ((null input)
+				(init-original-parser-options)
+				(second (assoc 'parser::*semantic-skeleton-scoring-enabled* *original-parser-options*)))
+			      ;; otherwise, obey the checkbox
+			      (semantic-skeleton-scoring t)
+			      (t nil)
+			      ))))
+		     ,@(when (and number-parses-desired
+		     		  (< 0 (length number-parses-desired))
+				  (every #'digit-char-p number-parses-desired))
+		       (let ((npd (parse-integer number-parses-desired)))
+		         (when (>= 10 npd) ; avoid DoS
+			   `(((parser::number-parses-desired parser::*chart*)
+				,npd)))))
+		   )
 		 :extraction-options
 		   (
 		     ,@(when (and trace-level
 				  (< 0 (length trace-level))
 				  (every #'digit-char-p trace-level))
-		       `(:trace-level ,(read-from-string trace-level)))
+		       `(:trace-level ,(parse-integer trace-level)))
 		     ,@(when (and rule-set
 		     		  (name-p rule-set)
 				  (probe-file
@@ -218,6 +228,8 @@
 	      (apply (if make-paragraph-p #'make-paragraph #'make-utterance)
 		     slots))
 	  )))))
+
+;;; see utterance.lisp for the rest of the message handlers
 
 ;;; from cgi-kqml-bridge.pl
 
@@ -252,12 +264,12 @@
 
 (defcomponent-handler
   '(tell &key :content (new-speech-act-hyps . *))
-  (lambda (msg args) (handle-new-speech-act msg (first args)))
+  #'handle-new-speech-act-hyps
   :subscribe t)
 
 (defcomponent-handler
   '(tell &key :content (new-speech-act . *))
-  #'handle-new-speech-act ; see utterance.lisp
+  #'handle-new-speech-act
   :subscribe t)
 
 (defcomponent-handler

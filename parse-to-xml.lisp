@@ -132,11 +132,12 @@
     ))
 
 (defun wrapped-tags-to-xml-stream (tt-output s)
-  (format-xml-start s '(tags ""))
-  (format-xml s `(lisp ,(format nil "~s" tt-output)))
-  (tags-to-xml-stream tt-output s)
-  (format-xml-end s "tags")
-  )
+  (when tt-output
+    (format-xml-start s '(tags ""))
+    (format-xml s `(lisp ,(format nil "~s" tt-output)))
+    (tags-to-xml-stream tt-output s)
+    (format-xml-end s "tags")
+    ))
 
 (defun utt-to-xml-stream (utt tree tt-output s)
   (let* ((terms (mapcar
@@ -179,7 +180,8 @@
     (lf-to-rdf-stream terms s)
     (format-xml-end s "terms")
     
-    (format-xml-end s "utt")
+    ;; NOTE: caller must do this (after adding its own children if any)
+    ;(format-xml-end s "utt")
     ))
 
 (defun fix-start-end-rec (speech-act-part tt-start tt-end)
@@ -206,7 +208,16 @@
       (fix-start-end-rec speech-act
           (apply #'min tt-offsets) (apply #'max tt-offsets)))))
 
-(defun parse-to-xml-stream-rec (lf trees tt-output s)
+(defun alt-hyps-to-xml-stream (alt-lfs s)
+  (when alt-lfs
+    (format s "<alt-hyps>~%")
+    (dolist (alt-lf alt-lfs)
+      ;; NOTE: we don't pass tt-output because it will be redundant
+      (parse-to-xml-stream-rec alt-lf nil nil s))
+    (format s "</alt-hyps>~%")
+    ))
+
+(defun parse-to-xml-stream-rec (lf alt-lfs tt-output s)
   (cond
     ((eq (car lf) 'compound-communication-act)
       (format s "<compound-communication-act>~%")
@@ -214,14 +225,19 @@
             with tt-outputs-by-utt = (split-tt-output-into-utts utts tt-output)
             for utt in utts
             for tree in
-	      (or trees
-	          (simplify-tree (subst-package (find-arg-in-act lf :tree) :w)))
+	      (or (simplify-tree (subst-package (find-arg-in-act lf :tree) :w))
+		  (make-list (length utts)))
 	    for msgs in tt-outputs-by-utt
-	    do (utt-to-xml-stream utt tree msgs s))
+	    do (utt-to-xml-stream utt tree msgs s)
+	       (format-xml-end s "utt")
+	    )
+      (alt-hyps-to-xml-stream alt-lfs s)
       (format s "</compound-communication-act>~%")
       )
     ((eq (car lf) 'utt)
-      (utt-to-xml-stream lf (when trees (first trees)) tt-output s)
+      (utt-to-xml-stream lf nil tt-output s)
+      (alt-hyps-to-xml-stream alt-lfs s)
+      (format-xml-end s "utt")
       )
     ((eq (car lf) 'failed-to-parse)
       (format-xml s '(failed-to-parse)))
@@ -233,11 +249,13 @@
       (unless (= (length lf) (length tt-output))
         (error "mismatched number of speech acts (~s) and TT utterances (~s)" (length lf) (length tt-output)))
       (loop for sa in lf
+	    for i upfrom 0
+	    for alt-sas = (mapcar (lambda (hyp) (nth i hyp)) alt-lfs)
             for tto in tt-output
             do (fix-start-end sa tto)
-	       (parse-to-xml-stream-rec sa trees tto s)))
+	       (parse-to-xml-stream-rec sa alt-sas tto s)))
 ;    ((and (= 1 (length lf)) (listp (car lf)))
-;      (parse-to-xml-stream-rec (car lf) trees tt-output s)
+;      (parse-to-xml-stream-rec (car lf) nil tt-output s)
 ;      )
     (t
       (format s "<bogus-lf>~%~S~%</bogus-lf>~%" lf)
@@ -324,14 +342,14 @@
     (format s "~%")
     ))
 
-(defun parse-to-xml-stream (options input debug-output extractions lf trees tt-output s)
+(defun parse-to-xml-stream (options input debug-output extractions lf alt-lfs tt-output s)
   (print-xml-header options input s)
   (format-xml s `(debug ,debug-output))
   (when (stringp extractions)
     (write-string extractions s))
   (ecase (find-arg options :component)
     (parser
-      (parse-to-xml-stream-rec lf trees tt-output s)
+      (parse-to-xml-stream-rec lf alt-lfs tt-output s)
       (format-xml-end s "trips-parser-output")
       )
     (texttagger
@@ -356,10 +374,12 @@
     )
   )
 
+#| not used anymore
 (defun show-trees ()
   "Do what show-tree used to do, and return all the trees instead of just the
    first one in a CCA."
   (parser::show-t1 (parser::get-answers) nil))
+|#
 
 (defun subst-package (l old-pkg &optional (new-pkg *package*))
   "Return a copy of list/tree structure l with symbols in old-pkg replaced by
@@ -387,18 +407,16 @@
 	  )))
     (cond
       (input
-	(multiple-value-bind (debug-output lf trees)
+	(multiple-value-bind (debug-output lf)
 	           ;; capture debug output
 	    (let* ((*standard-output* (make-string-output-stream))
+	           (parser::*include-parse-tree-in-messages* '(w::lex))
 	           (ig1 (parser::parse `(parser::start-sentence)))
 	           (ig2 (parser::parse `(parser::word ,input :frame (0 ,(length input)))))
-	           (lf (subst-package (parser::parse '(parser::end-sentence)) :parser))
-		   ;; TODO is this needed anymore, or does the lf have :tree in
-		   ;; it now in this mode too?
-		   (trees (simplify-tree (subst-package (show-trees) :parser))))
+	           (lf (subst-package (parser::parse '(parser::end-sentence)) :parser)))
 	        (declare (ignore ig1 ig2))
-	      (values (get-output-stream-string *standard-output*) lf trees))
-	  (parse-to-xml-stream options input debug-output nil lf trees nil s)))
+	      (values (get-output-stream-string *standard-output*) lf))
+	  (parse-to-xml-stream options input debug-output nil lf nil nil s)))
       (t
         (when parser::*semantic-skeleton-scoring-enabled*
 	  (setf options (append options '(:semantic-skeleton-scoring "on"))))

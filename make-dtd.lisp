@@ -48,6 +48,7 @@ Value VAL
     (format f "<!ELEMENT trips-parser-output (debug?, ekb?, (utt | compound-communication-act | failed-to-parse)*)>
 <!ATTLIST trips-parser-output input CDATA #IMPLIED
 			      system CDATA #REQUIRED
+			      service CDATA #REQUIRED
 			      parser-build-date CDATA #REQUIRED
 			      extscontents CDATA #IMPLIED
 			      extsformat CDATA #REQUIRED
@@ -61,6 +62,9 @@ Value VAL
 			      input-terms CDATA #IMPLIED
 			      no-sense-words CDATA #IMPLIED
 			      senses-only-for-penn-poss CDATA #IMPLIED
+			      split-mode CDATA #IMPLIED
+			      semantic-skeleton-scoring CDATA #IMPLIED
+			      number-parses-desired CDATA #IMPLIED
 			      rule-sets CDATA #IMPLIED
 			      rule-set CDATA #IMPLIED
 			      trace-level CDATA #IMPLIED>
@@ -77,8 +81,9 @@ Value VAL
 <!ELEMENT ekb ANY>
 <!ATTLIST ekb file CDATA #IMPLIED>
 <!ELEMENT failed-to-parse EMPTY>
-<!ELEMENT compound-communication-act (utt*)>
-<!ELEMENT utt (words, tags, tree, terms)>
+<!ELEMENT compound-communication-act (utt*, alt-hyps?)>
+<!ELEMENT utt (words, tags, tree, terms, alt-hyps?)>
+<!ELEMENT alt-hyps ((utt | compound-communication-act)*)>
 <!ELEMENT utterance (tags)>
 <!ATTLIST utterance text CDATA #REQUIRED>
 <!ELEMENT lisp (#PCDATA)>

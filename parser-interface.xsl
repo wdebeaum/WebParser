@@ -141,13 +141,42 @@
   </div>
  </xsl:template>
 
+ <xsl:template match="alt-hyps">
+  <xsl:for-each select="*">
+   <div class="hyp-{position()}">
+    <xsl:apply-templates select="." />
+   </div>
+  </xsl:for-each>
+ </xsl:template>
+
  <!-- utterances according to the Parser -->
  <xsl:template match="utt">
-  <hr />
-  <xsl:apply-templates select="words" />
-  <xsl:apply-templates select="tags" />
-  <xsl:apply-templates select="terms" />
-  <xsl:apply-templates select="tree" />
+  <xsl:choose>
+   <xsl:when test="alt-hyps">
+    <div class="hyp-0">
+     <hr />
+     <xsl:apply-templates select="words" />
+     <xsl:apply-templates select="tags" />
+     <xsl:apply-templates select="terms" />
+     <xsl:apply-templates select="tree" />
+    </div>
+    <xsl:apply-templates select="alt-hyps" />
+   </xsl:when>
+   <xsl:otherwise>
+    <hr />
+    <xsl:apply-templates select="words" />
+    <xsl:apply-templates select="tags" />
+    <xsl:apply-templates select="terms" />
+    <xsl:apply-templates select="tree" />
+   </xsl:otherwise>
+  </xsl:choose>
+ </xsl:template>
+
+ <xsl:template match="compound-communcation-act[alt-hyps]">
+  <div class="hyp-0">
+   <xsl:apply-templates select="utt" />
+  </div>
+  <xsl:apply-templates select="alt-hyps" />
  </xsl:template>
 
  <!-- utterances according to TextTagger -->
@@ -195,6 +224,7 @@
     #extraction-options { display: none; }
    ]]>
   </style>
+  <style type="text/css"></style>
   <link rel="stylesheet" type="text/css" href="../style/parser-interface.css" />
  </xsl:template>
 
@@ -364,7 +394,97 @@
    </xsl:otherwise>
   </xsl:choose>
  </xsl:template>
+
+ <xsl:template match="*" mode="serialize">
+  <xsl:text>&lt;</xsl:text>
+  <xsl:value-of select="name()" />
+  <!-- ick, special case rdf xmlns declarations (which aren't technically attributes so don't match @* ?) -->
+  <xsl:if test="self::rdf:RDF">
+   <xsl:text>
+  xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+  xmlns:role="http://www.cs.rochester.edu/research/trips/role#"
+  xmlns:LF="http://www.cs.rochester.edu/research/trips/LF#"</xsl:text>
+  </xsl:if>
+  <xsl:apply-templates select="@*" mode="serialize" />
+  <xsl:choose>
+   <xsl:when test="*|text()">
+    <xsl:text>&gt;</xsl:text>
+    <xsl:apply-templates select="*|text()" mode="serialize" />
+    <xsl:text>&lt;/</xsl:text>
+    <xsl:value-of select="name()" />
+    <xsl:text>&gt;</xsl:text>
+   </xsl:when>
+   <xsl:otherwise>
+    <xsl:text> /&gt;</xsl:text>
+   </xsl:otherwise>
+  </xsl:choose>
+ </xsl:template>
  
+ <xsl:template match="text()" mode="serialize">
+  <xsl:variable name="escaped-text-1">
+   <xsl:call-template name="str:replace">
+    <xsl:with-param name="string" select="string(.)" />
+    <xsl:with-param name="search" select="'&amp;'" />
+    <xsl:with-param name="replace" select="'&amp;amp;'" />
+   </xsl:call-template>
+  </xsl:variable>
+  <xsl:variable name="escaped-text-2">
+   <xsl:call-template name="str:replace">
+    <xsl:with-param name="string" select="string(exsl:node-set($escaped-text-1))" />
+    <xsl:with-param name="search" select="'&lt;'" />
+    <xsl:with-param name="replace" select="'&amp;lt;'" />
+   </xsl:call-template>
+  </xsl:variable>
+  <xsl:value-of select="exsl:node-set($escaped-text-2)" />
+ </xsl:template>
+
+ <xsl:template match="@*" mode="serialize">
+  <xsl:text> </xsl:text>
+  <xsl:value-of select="name()" />
+  <xsl:text>="</xsl:text>
+  <xsl:variable name="escaped-text-1">
+   <xsl:call-template name="str:replace">
+    <xsl:with-param name="string" select="string(.)" />
+    <xsl:with-param name="search" select="'&amp;'" />
+    <xsl:with-param name="replace" select="'&amp;amp;'" />
+   </xsl:call-template>
+  </xsl:variable>
+  <xsl:variable name="escaped-text-2">
+   <xsl:call-template name="str:replace">
+    <xsl:with-param name="string" select="string(exsl:node-set($escaped-text-1))" />
+    <xsl:with-param name="search" select="'&quot;'" />
+    <xsl:with-param name="replace" select="'&amp;quot;'" />
+   </xsl:call-template>
+  </xsl:variable>
+  <xsl:value-of select="exsl:node-set($escaped-text-2)" />
+  <xsl:text>"</xsl:text>
+ </xsl:template>
+ 
+ <xsl:template name="hyps-form">
+  <xsl:if test="@input">
+   <form action="save.pl" method="POST">
+    <xsl:if test="//alt-hyps">
+     <label title="Choose the index of the parsing hypothesis to display.">
+      Show parsing hypothesis #
+      <input name="hyp" type="number" min="0" max="{/trips-parser-output/@number-parses-desired - 1}" value="0" onchange="displayHyp(this.value)" />
+     </label>
+    </xsl:if>
+    For internal use (login required):
+    <input type="submit" name="judgement" value="this hypothesis is correct" title="Save these results, with the judgement that the currently displayed hypothesis is completely correct." />
+    <input type="submit" name="judgement" value="all hypotheses are incorrect" title="Save these results, with the judgement that all the available hypotheses are incorrect." />
+    <input type="hidden" name="results">
+     <xsl:attribute name="value">
+      <xsl:text>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+ &lt;?xml-stylesheet type="text/xsl" href="../style/parser-interface.xsl"?&gt;
+ &lt;!DOCTYPE trips-parser-output SYSTEM "../trips-parser-output.dtd"&gt;
+ </xsl:text>
+      <xsl:apply-templates select="/" mode="serialize" />
+     </xsl:attribute>
+    </input>
+   </form>
+  </xsl:if>
+ </xsl:template>
+
  <xsl:template name="footer">
   <hr />
   <div><a href="http://www.cs.rochester.edu/research/trips/lexicon/browse-ont-lex-ajax.html">Browse the TRIPS Lexicon and Ontology</a></div>
@@ -637,17 +757,22 @@
        </div>
       </xsl:if>
       <xsl:if test="/trips-parser-output">
-       <xsl:if test="@system = 'STEP'">
+       <xsl:if test="@system = 'STEP' or @number-parses-desired">
 	| <a href="javascript:toggleDisplay('parser-options')" title="Click here to show/hide options for the main Parser component. These are applied for the next input you parse.">Parser options</a>
 	<div id="parser-options">
-	 <ul class="checkboxes" id="parser-checkboxes">
-	  <li><label><input type="checkbox" name="semantic-skeleton-scoring">
-	   <xsl:if test="@semantic-skeleton-scoring">
-	    <xsl:attribute name="checked">checked</xsl:attribute>
-	   </xsl:if>
-	  </input>
-	  semantic skeleton scoring</label></li>
-	 </ul>
+	 <xsl:if test="@system = 'STEP'">
+	  <ul class="checkboxes" id="parser-checkboxes">
+	   <li><label><input type="checkbox" name="semantic-skeleton-scoring">
+	    <xsl:if test="@semantic-skeleton-scoring">
+	     <xsl:attribute name="checked">checked</xsl:attribute>
+	    </xsl:if>
+	   </input>
+	   semantic skeleton scoring</label></li>
+	  </ul>
+	 </xsl:if>
+	 <xsl:if test="@number-parses-desired">
+	  <label>Number of parsing hypotheses desired: <input type="number" name="number-parses-desired" min="1" max="10" value="{@number-parses-desired}" /></label>
+	 </xsl:if>
 	</div>
        </xsl:if>
        <xsl:if test="@system">
@@ -689,6 +814,7 @@
       |
      </div>
     </form>
+    <xsl:call-template name="hyps-form" />
     <xsl:apply-templates />
     <xsl:call-template name="footer" />
    </body>

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="cvsId" content="$Id: api.html,v 1.29 2018/10/19 17:44:56 wdebeaum Exp $">
+<meta name="cvsId" content="$Id: api.html,v 1.31 2019/04/29 21:38:28 wdebeaum Exp $">
 <meta charset="UTF-8">
 <title>TRIPS Parser Web API Documentation</title>
 <style type="text/css">
@@ -77,6 +77,8 @@ tr.first th {
 <dd>Select how finely TextTagger splits the paragraph into utterances; <code>split-sentences</code> only splits on sentence breaks, while <code>split-clauses</code> (the default) additionally splits on commas and certain other punctuation if the resulting clauses are long enough. Note that the Parser may further split the utterances it gets from TextTagger into smaller fragments, regardless of this setting.
 <dt><code>semantic-skeleton-scoring</code> (<code>step</code> only)
 <dd>If this parameter is present, use the SkeletonScorer module to guide parsing using our corpus of hand-annotated semantic skeletons. This is on by default when using the <code>step</code> web parser in a web browser, but if you're using this API programmatically you need to give this parameter explicitly if you want to use this feature (this is due to how checkboxes work in web forms).
+<dt><code>number-parses-desired</code>
+<dd>The total number of parsing hypotheses to be output per input utterance. This includes both the top choice and the <code>&lt;alt-hyps&gt;</code>. The maximum allowed value is 10.
 <dt><code>component</code>
 <dd>Select which component to focus on. The default is <code>parser</code>, but you can also use <code>texttagger</code>, which will only run the TextTagger component and not the Parser or the extractor, and will return a <code>&lt;texttagger-output&gt;</code> XML document instead of <code>&lt;trips-parser-output&gt;</code> (see TextTagger Output Format below).
 <dt><code>extsformat</code>, <code>tagsformat</code>, <code>treecontents</code>, <code>treeformat</code>, <code>lfformat</code>
@@ -123,6 +125,10 @@ tr.first th {
         ...
       &lt;/rdf:RDF&gt;
     &lt;/terms&gt;
+    &lt;alt-hyps&gt;
+      &lt;utt&gt;...&lt;/utt&gt;
+      ...
+    &lt;/alt-hyps&gt;
   &lt;/utt&gt;
   ...
 &lt;/trips-parser-output&gt;
@@ -135,7 +141,7 @@ tr.first th {
 <p>In the event that a sentence or fragment completely fails to parse (e.g. because of an error), there will be an empty <code>&lt;failed-to-parse /&gt;</code> element instead of an <code>&lt;utt&gt;</code>.</p>
 
 <h3><code>&lt;utt&gt;</code></h3>
-<p>Each <code>&lt;utt&gt;</code> has four children: <code>&lt;words&gt;</code>, <code>&lt;tags&gt;</code>, <code>&lt;tree&gt;</code>, and <code>&lt;terms&gt;</code>. These are each described below. One feature they share is that they contain both a Lisp form and an XML form of the same information. The Lisp form is in the <code>&lt;lisp&gt;</code> child, and is the original Lisp S-expression output by TRIPS. The XML form is derived from it for ease of use (especially by the XSL stylesheet presenting the page in the web browser). This document mainly describes the XML form.</p>
+<p>Each <code>&lt;utt&gt;</code> has four children: <code>&lt;words&gt;</code>, <code>&lt;tags&gt;</code>, <code>&lt;tree&gt;</code>, and <code>&lt;terms&gt;</code>, and an optional fifth, <code>&lt;alt-hyps&gt;</code>. These are each described below. One feature the first four share is that they contain both a Lisp form and an XML form of the same information. The Lisp form is in the <code>&lt;lisp&gt;</code> child, and is the original Lisp S-expression output by TRIPS. The XML form is derived from it for ease of use (especially by the XSL stylesheet presenting the page in the web browser). This document mainly describes the XML form.</p>
 
 <h3><code>&lt;words&gt;</code></h3>
 <p>The <code>&lt;words&gt;</code> element contains the list of words (and other tokens), as processed by the main TRIPS Parser module. This means they use all-caps, split certain endings off, and replace certain punctuation characters. For example, "." becomes <code>&lt;word&gt;PUNC-PERIOD&lt;/word&gt;</code>, and "don't" becomes <code>&lt;word&gt;DO-&lt;/word&gt;&lt;word&gt;N^T&lt;/word&gt;</code>. Note that the <code>&lt;tags&gt;</code> element also contains <code>&lt;word&gt;</code> elements, but these are different and should be processed differently.</p>
@@ -333,6 +339,11 @@ This never actually gets out of TextTagger, since the tag only has domain-specif
 <tr><td>:TMA ((TENSE ...) (PERF ...) (NEGATION ...) ...)</td>
     <td>role:TENSE, role:PERF, role:NEGATION, ...</td></tr>
 </table>
+
+<h3><code>&lt;alt-hyps&gt;</code></h3>
+<p>The <code>&lt;alt-hyps&gt;</code> element contains <code>&lt;utt&gt;</code>s (or <code>&lt;compound-communication-act&gt;</code>s) representing alternative parsing hypotheses, in order from most to least preferred (the top choice is the parent element). These alternatives will not have the <code>&lt;tags&gt;</code> element (since the TextTagger output will be the same for all hypotheses), and the <code>&lt;tree&gt;</code> may be <code>NIL</code>, but the <code>&lt;words&gt;</code> and <code>&lt;terms&gt;</code> will be present.</p>
+
+<p>The <code>&lt;alt-hyps&gt;</code> element will only appear as the child of a top-level <code>&lt;utt&gt;</code> or <code>&lt;compound-communication-act&gt;</code> element, not more deeply nested elements.</p>
 
 <h3><code>&lt;ekb&gt;</code></h3>
 <p>Note: this section may be incomplete or out of date; the <a href="https://github.com/wdebeaum/drum/blob/master/src/EKB/dtd/ekb.dtd">ekb.dtd</a> is a better reference.</p>

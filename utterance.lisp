@@ -14,6 +14,7 @@
   debug-output-stream ; string-output-stream replacing *standard-output* while parsing
   texttagger-output ; word and prefer messages from TT
   parser-output
+  (alt-parser-output (list nil)) ; non-first hyps from new-speech-act-hyps
   )
 
 (defstruct (utterance (:include text-unit))
@@ -81,6 +82,8 @@
     (setf *original-parser-options* `(
         (parser::*semantic-skeleton-scoring-enabled*
 	  ,parser::*semantic-skeleton-scoring-enabled*)
+	((parser::number-parses-desired parser::*chart*)
+	  ,(parser::number-parses-desired parser::*chart*))
         ))))
 
 (defun reset-parser-options ()
@@ -134,11 +137,21 @@
     (defun set-extraction-options (opts) (declare (ignore opts)) nil)
     ))
 
+(defun start-conversation ()
+  "Send the start-conversation message to certain module(s). Notably we send to
+   IM, to reset its utt record, which only has room for 10,000 utterances. Also
+   notably, we do *not* send to Parser, which would race with WebParser to set
+   its settings. Technically IM's settings could also be in a race, but
+   realistically the input takes long enough to get through earlier stages to IM
+   that that doesn't matter.
+   As far as I know, no other relevant modules need or use the
+   start-conversation reset (DrumGUI, TextTagger, ChannelKB, etc.).
+   "
+  (send-msg '(tell :receiver IM :content (start-conversation))))
+
 (defun send-utterance-to-system (utt)
   (setf (utterance-num utt) *last-uttnum*)
-  ;; reset stuff throughout the system, including IM's utt record, which only
-  ;; has room for 10,000 utterances
-  (send-msg '(broadcast :content (tell :content (start-conversation))))
+  (start-conversation)
   (ensure-original-tt-parameters)
   ;; set TT options if they were given in the request
   (when (utterance-texttagger-options utt)
@@ -160,7 +173,7 @@
 
 ;; without DrumGUI, just sending directly to TextTagger
 (defun send-paragraph-to-system (para)
-  (send-msg '(broadcast :content (tell :content (start-conversation))))
+  (start-conversation)
   (set-parser-options (paragraph-parser-options para))
   (set-extraction-options (paragraph-extraction-options para))
   (let ((tt-reply
@@ -268,7 +281,7 @@
   )
 
 (defun tag-text-using-texttagger (text)
-  (send-msg '(broadcast :content (tell :content (start-conversation))))
+  (start-conversation)
   (let ((tt-reply
 	  (send-and-wait `(request :receiver texttagger :content
 	      (tag :text ,(text-unit-text text)
@@ -343,6 +356,20 @@
 	 (sm (when (paragraph-p text) (paragraph-split-mode text)))
 	 (po (text-unit-parser-options text))
 	 (sss-pair (assoc 'parser::*semantic-skeleton-scoring-enabled* po))
+	 (npd
+	   (second
+	     (or
+	       (assoc '(parser::number-parses-desired parser::*chart*) po
+		      :test #'equalp)
+	       ;; wasn't explicitly supplied; still tell client what the
+	       ;; default is, so that the hyp selector works
+	       (progn
+		 (init-original-parser-options)
+		 (assoc '(parser::number-parses-desired parser::*chart*)
+			*original-parser-options*
+			:test #'equalp)
+		 )
+	       )))
 	 (eo (text-unit-extraction-options text))
 	 (rs (find-arg eo :rule-set))
 	 (tl (find-arg eo :trace-level))
@@ -370,6 +397,7 @@
       ,@(when sss-pair
 	(list :semantic-skeleton-scoring
 	      (when (second sss-pair) (format nil "~a" (second sss-pair)))))
+      :number-parses-desired ,npd
       ,@(when rs (list :rule-set rs))
       ,@(when tl (list :trace-level (format nil "~s" tl)))
       ,@(when (eq 'parser (text-unit-component text))
@@ -485,10 +513,13 @@
     (handler-case (apply-sentence-lfs text) ; NOTE: does nothing w/o sentence-lfs
       (error (e) (warn "apply-sentence-lfs failed: ~a" e))))
   (let ((speech-act (text-unit-parser-output text))
+        (alt-speech-acts (cdr (text-unit-alt-parser-output text)))
         (s (make-string-output-stream)))
     (when (paragraph-p text)
       ;; undo reversing effect of pushing each utt's act into the output list
-      (setf speech-act (reverse speech-act)))
+      (setf speech-act (reverse speech-act))
+      (loop for c on alt-speech-acts do (setf (car c) (reverse (car c))))
+      )
     ;; stop capturing debug output
     (setf *standard-output* *original-standard-output*)
     (parse-to-xml-stream
@@ -498,7 +529,7 @@
       (when (paragraph-p text)
         (paragraph-extractions text))
       speech-act
-      nil ;trees
+      alt-speech-acts
       (if (eq 'parser (text-unit-component text))
 	;; using push reverses tt output lists, so we undo that here
 	(reverse (if (paragraph-p text)
@@ -611,15 +642,18 @@
 		(rplacd (last lf) (list :coref coref))
 		))))))))
 
-(defun handle-new-speech-act (msg args)
-    (declare (ignore msg))
-  (let* ((speech-act (first args)) ; get lf from message args
-         (sa-uttnum (speech-act-uttnum speech-act))
-	 ;; this doesn't work when processing a paragraph; instead we get trees
-	 ;; from the utts now that that actually has all the trees and not just
-	 ;; the first
-         ;(trees (subst-package (show-trees) :parser)) ; get trees directly from parser via library call
-	 (text (car *pending-text-units*)))
+(defmacro ensure-nth (n l)
+  "Make sure list l has the index n, by nconc'ing nils to the end if necessary."
+  `(when (<= (length ,l) ,n)
+    (setf ,l (nconc ,l (make-list (1+ (- ,n (length ,l))))))))
+
+(defun handle-one-speech-act-hyp (index speech-act)
+  (let ((sa-uttnum (speech-act-uttnum speech-act))
+	;; this doesn't work when processing a paragraph; instead we get trees
+	;; from the utts now that that actually has all the trees and not just
+	;; the first
+        ;(trees (subst-package (show-trees) :parser)) ; get trees directly from parser via library call
+	(text (car *pending-text-units*)))
     (etypecase text
       (utterance
 	(cond
@@ -628,14 +662,35 @@
 	  ((not (eql (utterance-num text) sa-uttnum))
 	    (error "uttnum mismatch; expected ~s but got ~s in new-speech-act" (utterance-num text) sa-uttnum))
 	  )
-	(setf (utterance-parser-output text) speech-act)
+	(if (= 0 index)
+	  (setf (utterance-parser-output text) speech-act)
+	  (progn
+	    (ensure-nth index (utterance-alt-parser-output text))
+	    (setf (nth index (utterance-alt-parser-output text)) speech-act)
+	    )
+	  )
 	)
       (paragraph
-        (push speech-act (paragraph-parser-output text))
-        )
+        (if (= 0 index)
+	  (push speech-act (paragraph-parser-output text))
+	  (progn
+	    (ensure-nth index (paragraph-alt-parser-output text))
+	    (push speech-act (nth index (paragraph-alt-parser-output text)))
+	    )
+	  ))
       (null
         (warn "got new-speech-act with no pending text-units"))
       )))
+
+(defun handle-new-speech-act (msg args)
+    (declare (ignore msg))
+  (handle-one-speech-act-hyp 0 (first args)))
+
+(defun handle-new-speech-act-hyps (msg args)
+    (declare (ignore msg))
+  (loop for hyp in (first args)
+        for i upfrom 0
+	do (handle-one-speech-act-hyp i hyp)))
 
 (defun handle-paragraph-completed (msg args)
     (declare (ignore args)) ; TODO check whether :id matches start-paragraph/end-paragraph's
