@@ -373,6 +373,9 @@
   <div>Parser built on
    <xsl:value-of select="@parser-build-date" />
   </div>
+  <xsl:if test="@system = 'DRUM' or @system = 'BOB' or contains(@tag-type, 'drum')">
+   <p>Some TextTagger tags from the Drum tagger are derived from the <a href="https://www.nlm.nih.gov/mesh/meshhome.html">MeSH&#174;</a> SCR data set from <a href="https://www.nlm.nih.gov/">NLM</a>, but these may not reflect the most current data available from NLM, and NLM has not endorsed this service. See also this <a href="http://trips.ihmc.us/TextTagger/docs/README.xhtml#sec-5.7.9.">table of data sources</a> for the Drum tagger.</p>
+  </xsl:if>
   <p>Development of this system has been supported in part by:</p>
   <ul>
    <li>The National Science Foundation (grants 0958193 and 1012205)</li>

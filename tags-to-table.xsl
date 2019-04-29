@@ -112,7 +112,7 @@ William de Beaumont
    </a>
   </xsl:when>
   <xsl:when test="$pkg = 'MESH'">
-   <a title="Medical Subject Headings" href="http://www.nlm.nih.gov/cgi/mesh/2015/MB_cgi?field=uid&amp;term={$id}">
+   <a title="Medical Subject Headings" href="https://meshb.nlm.nih.gov/record/ui?ui={$id}">
     <xsl:value-of select="." />
    </a>
   </xsl:when>
