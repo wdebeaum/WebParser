@@ -470,8 +470,8 @@
      </label>
     </xsl:if>
     For internal use (login required):
-    <input type="submit" name="judgement" value="✓ this hypothesis is correct" title="Save these results, with the judgement that the currently displayed hypothesis is completely correct." />
-    <input type="submit" name="judgement" value="✗ all hypotheses are incorrect" title="Save these results, with the judgement that all the available hypotheses are incorrect." />
+    <input type="submit" name="judgement" value="this hypothesis is correct" title="Save these results, with the judgement that the currently displayed hypothesis is completely correct." />
+    <input type="submit" name="judgement" value="all hypotheses are incorrect" title="Save these results, with the judgement that all the available hypotheses are incorrect." />
     <input type="hidden" name="results">
      <xsl:attribute name="value">
       <xsl:text>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
