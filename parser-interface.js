@@ -50,9 +50,11 @@ function initHypDisplay() {
       }
     }
   }
-  hypInput.value = initialHyp;
-  if (undefined !== correctHyp) {
-    hypInput.parentNode.className = ((initialHyp === correctHyp) ? 'correct' : 'incorrect');
+  if (hypInput) {
+    hypInput.value = initialHyp;
+    if (undefined !== correctHyp) {
+      hypInput.parentNode.className = ((initialHyp === correctHyp) ? 'correct' : 'incorrect');
+    }
   }
 }
 
@@ -60,7 +62,7 @@ function displayHyp(hyp) {
   for (var i = 0; i < hypStyleSheet.cssRules.length; i++) {
     hypStyleSheet.cssRules[i].style.display = ((i == hyp) ? '' : 'none');
   }
-  if (undefined !== correctHyp) {
+  if (hypInput && undefined !== correctHyp) {
     hypInput.parentNode.className = ((hyp === correctHyp) ? 'correct' : 'incorrect');
   }
 }
