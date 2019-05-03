@@ -7,6 +7,29 @@ input[type='number'] {
   margin-right: 2em;
 }
 
+.incorrect input {
+  background-color: #ff7f7f;
+}
+
+.incorrect::after {
+  content: ' ✗';
+  color: #7f0000;
+}
+
+.correct input {
+  background-color: #7fff7f;
+}
+
+.correct::after {
+  content: ' ✓';
+  color: #007f00;
+}
+
+label::after {
+  position: relative;
+  left: -2em;
+}
+
 table.tags {
   border-collapse: collapse;
   margin-bottom: 1em;

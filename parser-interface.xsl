@@ -129,7 +129,7 @@
  </xsl:template>
 
  <xsl:template match="terms">
-  <h2 title="The Logical Form as described in the &quot;LF Documentation&quot; link below. Words and ONT types (in the Lisp and AMR formats) link to the TRIPS Lexicon and Ontology Browsers, respectively.">Logical Form</h2>
+  <h2 class="lf" title="The Logical Form as described in the &quot;LF Documentation&quot; link below. Words and ONT types (in the Lisp and AMR formats) link to the TRIPS Lexicon and Ontology Browsers, respectively.">Logical Form</h2>
   <div class="lf-lisp">
    <xsl:apply-templates select="rdf:RDF" mode="lf-to-html" />
   </div>
@@ -172,7 +172,7 @@
   </xsl:choose>
  </xsl:template>
 
- <xsl:template match="compound-communcation-act[alt-hyps]">
+ <xsl:template match="compound-communication-act[alt-hyps]">
   <div class="hyp-0">
    <xsl:apply-templates select="utt" />
   </div>
@@ -466,12 +466,12 @@
     <xsl:if test="//alt-hyps">
      <label title="Choose the index of the parsing hypothesis to display.">
       Show parsing hypothesis #
-      <input name="hyp" type="number" min="0" max="{/trips-parser-output/@number-parses-desired - 1}" value="0" onchange="displayHyp(this.value)" />
+      <input id="hyp" name="hyp" type="number" min="0" max="{/trips-parser-output/@number-parses-desired - 1}" value="0" onchange="displayHyp(parseInt(this.value))" />
      </label>
     </xsl:if>
     For internal use (login required):
-    <input type="submit" name="judgement" value="this hypothesis is correct" title="Save these results, with the judgement that the currently displayed hypothesis is completely correct." />
-    <input type="submit" name="judgement" value="all hypotheses are incorrect" title="Save these results, with the judgement that all the available hypotheses are incorrect." />
+    <input type="submit" name="judgement" value="✓ this hypothesis is correct" title="Save these results, with the judgement that the currently displayed hypothesis is completely correct." />
+    <input type="submit" name="judgement" value="✗ all hypotheses are incorrect" title="Save these results, with the judgement that all the available hypotheses are incorrect." />
     <input type="hidden" name="results">
      <xsl:attribute name="value">
       <xsl:text>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
