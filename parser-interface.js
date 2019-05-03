@@ -36,18 +36,28 @@ function initHypDisplay() {
   }
   // initially show the correct hyp, if any; otherwise the first one
   var initialHyp = (('number' == typeof correctHyp) ? correctHyp : 0);
-  for (var i = 0; document.getElementsByClassName("hyp-" + i).length > 0; i++) {
+  var i;
+  for (i = 0; document.getElementsByClassName("hyp-" + i).length > 0; i++) {
     hypStyleSheet.insertRule(
       ".hyp-" + i + ((i == initialHyp) ? " { }" : " { display: none; }"),
       hypStyleSheet.cssRules.length
     );
     if (undefined !== correctHyp) {
-      var lfHeadings = document.querySelectorAll('div.hyp-' + i + ' h2.lf')
+      var lfHeadings = document.querySelectorAll('div.hyp-' + i + ' h2.lf');
       for (var j = 0; j < lfHeadings.length; j++) {
 	lfHeadings[j].classList.add(
 	  (i === correctHyp) ? 'correct' : 'incorrect'
 	);
       }
+    }
+  }
+  if (i == 0 && // no .hyp-0 means there's only one hyp, and it's not in a div
+      undefined !== correctHyp) {
+    var lfHeadings = document.querySelectorAll('h2.lf');
+    for (var j = 0; j < lfHeadings.length; j++) {
+      lfHeadings[j].classList.add(
+	(i === correctHyp) ? 'correct' : 'incorrect'
+      );
     }
   }
   if (hypInput) {
