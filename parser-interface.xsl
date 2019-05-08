@@ -463,12 +463,17 @@
  <xsl:template name="hyps-form">
   <xsl:if test="@input">
    <form action="save.pl" method="POST">
-    <xsl:if test="//alt-hyps">
-     <label title="Choose the index of the parsing hypothesis to display.">
-      Show parsing hypothesis #
-      <input id="hyp" name="hyp" type="number" min="0" max="{/trips-parser-output/@number-parses-desired - 1}" value="0" onchange="displayHyp(parseInt(this.value))" />
-     </label>
-    </xsl:if>
+    <xsl:choose>
+     <xsl:when test="//alt-hyps">
+      <label title="Choose the index of the parsing hypothesis to display.">
+       Show parsing hypothesis #
+       <input id="hyp" name="hyp" type="number" min="0" max="{/trips-parser-output/@number-parses-desired - 1}" value="0" onchange="displayHyp(parseInt(this.value))" />
+      </label>
+     </xsl:when>
+     <xsl:otherwise>
+      <input type="hidden" name="hyp" value="0" />
+     </xsl:otherwise>
+    </xsl:choose>
     For internal use (login required):
     <input type="submit" name="judgement" value="this hypothesis is correct" title="Save these results, with the judgement that the currently displayed hypothesis is completely correct." />
     <input type="submit" name="judgement" value="all hypotheses are incorrect" title="Save these results, with the judgement that all the available hypotheses are incorrect." />
