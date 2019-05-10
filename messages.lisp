@@ -112,6 +112,8 @@
 	   (do-inference (member uri-basename '("drum-er" "cwmsreader") :test #'string=)))
       (when (string= uri-basename "lex-ont")
         (return-from handle-http-request (handle-lex-ont msg query)))
+      (when (string= uri-basename "lex-ont-edit")
+        (return-from handle-http-request (handle-lex-ont-edit msg query)))
       (when (string= uri-basename "get-word-def")
         (return-from handle-http-request (handle-get-word-def msg query)))
 ;      (unless (member uri-basename '("parse" "drum") :test #'string=)

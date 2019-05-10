@@ -109,6 +109,25 @@
   "Convert a sense key to an XML ID by converting %s and :s to -s."
   (substitute #\- #\: (substitute #\- #\% sk)))
 
+(defun sense-key-to-new-ont-type (sk)
+  "Convert a (proper) sense key to an ONT type symbol, by converting % to * and
+   : to --, and omitting trailing ::"
+  (loop for c across sk
+        collect
+	  (cond
+	    ((char= c #\%) "*")
+	    ((char= c #\:) "--")
+	    ((alpha-char-p c) (list (char-upcase c)))
+	    ((digit-char-p c) (list c))
+	    (t "_")
+	    )
+	  into char-list
+	finally
+	  (when (equalp (last char-list 2) '("--" "--"))
+	    (setf char-list (butlast char-list 2)))
+	  (return (intern (apply #'concatenate 'string char-list) :ont))
+	))
+
 (defun id-to-sense-key (id)
   "Inverse of sense-key-to-id, if id was a well-formed sense key; otherwise
    nil."
@@ -366,7 +385,7 @@
 	when wn-path
 	do (setf (word-def-synset d) ss
 		 (word-def-sense-key d)
-		   (wf::sense-key-for-word-and-synset wn-word ss)
+		   (first (wf::sense-key-for-word-and-synset wn-word ss))
 		 (word-def-wn-path d) wn-path)
 	   (return t)
 	finally (return nil)
@@ -379,16 +398,16 @@
   (w::adv "adv")
   ) "inverse of wf::convert-wordnet-pos-to-trips")
 
-(defun make-word-def-from-list (q def-list)
+(defun make-word-def-from-list (w def-list)
   "Make a word-def struct from one of the lists returned by get-word-def for a
-   definition of a single sense. q is the search query string."
+   definition of a single sense. w is the word structure derived from the
+   search query string."
   (destructuring-bind (pct pos . feats)
       (fourth def-list)
       (declare (ignore pct))
     (destructuring-bind (colon-star &optional (ont-type colon-star) (lemma-sym ont-type))
         (second (assoc 'w::lf feats))
-      (let* ((w (make-word-from-string q))
-             (l (make-word-from-symbol lemma-sym))
+      (let* ((l (make-word-from-symbol lemma-sym))
 	     (d (make-word-def :word w :lemma l :pos pos :ont-type ont-type
 			       :template (second (assoc 'w::template feats))
 			       :nom-of
@@ -462,7 +481,7 @@
    version of the sense XML with the WordNet sense that was used to map it to
    the ONT type from the original sense XML as the new class, and any
    intermediate synsets as extra ancestors. Also include the gloss from WN."
-  (with-slots (ont-type synset sense-key wn-path) d
+  (with-slots (ont-type synset wn-path) d
     (if (null synset)
       ;; in trips
       `(class :source "trips" ,@(cdr xml))
@@ -517,8 +536,6 @@
 	)
   )
 
-(defvar *show-wn-senses-only-for-core-synsets* nil)
-
 ;; Test cases:
 	; problems
 ;; "truck" - in TRIPS and WN as noun and verb
@@ -542,7 +559,7 @@
   (unless q (setf q "word"))
   (let* ((q-word (make-word-from-string q))
 	 (word-defs
-	   (mapcar (lambda (dl) (make-word-def-from-list q dl))
+	   (mapcar (lambda (dl) (make-word-def-from-list q-word dl))
 		   (let ((*package* (find-package :webparser)))
 		     (send-and-wait `(request :receiver lxm :content
 			 (get-word-def ,(word-gwd q-word) nil))))))
@@ -580,6 +597,8 @@
 				  '(:use-trips-and-wf-senses "T"))
 			      ,@(when *show-wn-senses-only-for-core-synsets*
 				  '(:show-wn-senses-only-for-core-synsets "T"))
+			      ,@(when *allow-lex-ont-editing*
+			          '(:allow-editing "T"))
 			      ("WORD" :name "not found")))
 		  ))
 	    ))
@@ -595,6 +614,8 @@
 			  '(:use-trips-and-wf-senses "T"))
 		      ,@(when *show-wn-senses-only-for-core-synsets*
 		          '(:show-wn-senses-only-for-core-synsets "T"))
+		      ,@(when *allow-lex-ont-editing*
+			  '(:allow-editing "T"))
 		      ""))
 	  (format s "~%")
 	  (dolist (lemma lemmas)
@@ -969,3 +990,103 @@ $(document).ready(function(){
 	      ))
 	  (t *lex-ont-frameset*)
 	  )))))
+
+(defun subst-pkg (new old tree)
+  "Return a version of tree where all symbols in the package old are replaced
+   with corresponding symbols in the package new."
+  (unless (packagep new) (setf new (find-package new)))
+  (unless (packagep old) (setf old (find-package old)))
+  (typecase tree
+    (symbol
+      (if (eq old (symbol-package tree))
+        (intern (symbol-name tree) new)
+	tree))
+    (cons
+      (cons (subst-pkg new old (car tree)) (subst-pkg new old (cdr tree))))
+    (otherwise tree)
+    ))
+
+(defun add-ont-type-for-wn-sense (sk)
+  (let* ((id (sense-key-to-id sk))
+	 (pct (position #\% sk))
+	 (lemma_ (subseq sk 0 pct))
+	 (w (make-word-from-string lemma_))
+	 (word-defs
+	   ;; get word defs like lex-ont does
+	   (let ((old-utawfs lxm::*use-trips-and-wf-senses*)
+		 (old-swnsofcs *show-wn-senses-only-for-core-synsets*)
+		 (old-wfsl lxm::*wf-sense-limit*))
+	     (setf lxm::*use-trips-and-wf-senses* t
+		   *show-wn-senses-only-for-core-synsets* nil
+		   lxm::*wf-sense-limit* 1000000)
+	     (unwind-protect 
+		 (mapcar (lambda (dl) (make-word-def-from-list w dl))
+			 (let ((*package* (find-package :webparser)))
+			   (send-and-wait `(request :receiver lxm :content
+			       (get-word-def ,(word-gwd w) nil)))))
+	       ;; reset utawfs, swnsofcs, and wfsl to old values
+	       (setf lxm::*use-trips-and-wf-senses* old-utawfs
+		     *show-wn-senses-only-for-core-synsets* old-swnsofcs
+		     lxm::*wf-sense-limit* old-wfsl))))
+	 (sk-defs
+	   (or
+	     (remove-if-not
+	       (lambda (d)
+		 (string= sk (word-def-sense-key d)))
+	       word-defs)
+	     (error "can't find def with sense key ~s among word defs:~%~s~%" sk word-defs)
+	     ))
+	 ;; sk-defs should differ only in templates, so get those from all, and
+	 ;; get pos/ont-type from first def
+	 (templates (mapcar #'word-def-template sk-defs))
+	 )
+    (with-slots (pos ont-type) (first sk-defs)
+      ;; construct define-type and define-words expressions for the new senses
+      (let* ((new-ont-type (sense-key-to-new-ont-type sk))
+	     (dt `(define-type ,new-ont-type
+		    :parent ,ont-type
+		    :wordnet-sense-keys (,sk)))
+	     (dw
+		   `(define-words :pos ,pos
+		     :words (
+		       (,(word-gwd w)
+			 (senses
+			   ,@(mapcan
+			       (lambda (template)
+				 `(((lf-parent ,new-ont-type)
+				    (templ ,template))))
+			       templates)
+			   )))))
+	     )
+        ;(format t "~s~%~s~%" dt dw)
+	;; evaluate them with the correct symbol packages and current package
+	;; (just in case that matters), and save them
+        (let ((*package* (find-package :om)))
+	  (eval (cons 'om::define-type (cdr dt))))
+	;; also add to WF's mapping hash table
+	(wf::add-sense-key-to-ont-type-mapping sk new-ont-type)
+	(setf *ont-edits* (nconc *ont-edits* (list dt)))
+        (let ((*package* (find-package :lxm)))
+	  (eval (subst-pkg :lxm :webparser dw)))
+	(setf *lex-edits* (nconc *lex-edits* (list dw)))
+	;; tell the browser we succeeded
+	'(http 200 :content-type "text/plain" :content "added")))))
+
+(defun handle-lex-ont-edit (msg query)
+  (destructuring-bind (&key op arg) query
+    (reply-to-msg msg 'tell :content
+      (cond
+	((equalp op "download")
+	  `(http 200
+	     :content-type "text/x-common-lisp"
+	     :content-disposition "attachment; filename=\"domain-words.lisp\""
+	     :content ,(format nil "(in-package :om)~%~%~{~s~%~%~}(in-package :lxm)~%~%~{~s~%~%~}" *ont-edits* *lex-edits*)))
+	((equalp op "add-ont-type-for-wn-sense")
+	  (let ((sk (proper-sense-key arg)))
+	    (cond
+	      ((null sk)
+	        '(http 404 :content-type "text/plain" :content "sense key not found"))
+	      (t (add-ont-type-for-wn-sense sk))
+	      )))
+	(t '(http 400 :content-type "text/plain" :content "expected query parameter op to be 'download' or 'add-ont-type-for-wn-sense'"))
+	))))

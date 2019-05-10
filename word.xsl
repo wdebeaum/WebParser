@@ -156,6 +156,12 @@ function setTargets() {
    Show WN senses only for core synsets
   </label>
  </form>
+ <xsl:if test="@allow-editing">
+  <form action="lex-ont-edit">
+   <input type="hidden" name="op" value="download" />
+   <input type="submit" value="download edits" />
+  </form>
+ </xsl:if>
  <xsl:for-each select="WORD">
   <h2><xsl:value-of select="@name" /></h2>
   <ul>
@@ -198,6 +204,13 @@ function setTargets() {
 	<span style="display: none" id="{$pos}-{@onttype}-ancestors"><xsl:value-of select="@ancestors" /></span>
        </dt>
        <dd class="{@source}">
+        <xsl:if test="/WORDS/@allow-editing and @source!='trips'">
+	 <form action="lex-ont-edit">
+	  <input type="hidden" name="op" value="add-ont-type-for-wn-sense" />
+	  <input type="hidden" name="arg" value="{@onttype}" />
+	  <input type="submit" value="add to TRIPS" />
+	 </form>
+	</xsl:if>
 	<xsl:if test="@gloss">
 	 Gloss: <xsl:value-of select="@gloss" /><br />
 	</xsl:if>

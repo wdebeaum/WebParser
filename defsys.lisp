@@ -44,6 +44,10 @@
 ;; NOTE: ~ for $HOME works on SBCL but not CMUCL, but we're not using this on
 ;; URCS anyway
 (defvar *rule-set-path-format* "~~/extraction-rules/~aRuleSet.lisp")
+(defvar *show-wn-senses-only-for-core-synsets* nil)
+(defvar *allow-lex-ont-editing* (trips:get-env "ALLOW_LEX_ONT_EDITING") "Allow users of the lex-ont browser to dynamically edit the lexicon and ontology. Such edits will affect everyone using this running instance of the system, so you should probably only turn this on if you know you're the only one using this instance.")
+(defvar *lex-edits* nil)
+(defvar *ont-edits* nil)
 
 (defun run ()
   (dfc:run-component :webparser))

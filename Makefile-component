@@ -24,6 +24,9 @@ install:: $(CGI_FILES) $(STYLE_FILES) $(OTHER_WWW_FILES)
 	rm -f $(CGI_DIR)/cgi-kqml-bridge.pl
 	./install-cgi.pl $(CGI_DIR) parse
 	./install-cgi.pl $(CGI_DIR) lex-ont
+	if [ -n $$ALLOW_LEX_ONT_EDITING ] ; then \
+	  ./install-cgi.pl $(CGI_DIR) lex-ont-edit ; \
+	fi
 	./install-cgi.pl $(CGI_DIR) get-word-def
 	for d in ../Systems/* ; do \
 	  if [ -d $$d -a $$d != "../Systems/core" -a $$d != "../Systems/CVS" ] ; then \
