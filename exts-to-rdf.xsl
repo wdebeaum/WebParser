@@ -85,7 +85,9 @@ William de Beaumont
 </xsl:template>
 
 <!-- simple leaf values -->
-<xsl:template match="active | negation | polarity | modality | spec | unit | min | max" mode="exts-to-rdf">
+<xsl:template match="active | negation | polarity | modality | spec | unit |
+		     min | max | amount[not(@id)] | value[not(@id)]"
+	      mode="exts-to-rdf">
  <xsl:element name="role:{local-name()}">
   <xsl:value-of select="." />
  </xsl:element>
@@ -164,7 +166,7 @@ William de Beaumont
 </xsl:template>
 
 <!-- modifier value -->
-<xsl:template match="value[not(*)]" mode="exts-to-rdf">
+<xsl:template match="value[not(@id) and not(*)]" mode="exts-to-rdf">
   <xsl:element name="role:{local-name()}">
     <xsl:value-of select="." />
   </xsl:element>
@@ -182,14 +184,33 @@ William de Beaumont
  <xsl:apply-templates select="negation | polarity | mods" mode="exts-to-rdf" />
 </xsl:template -->
 
-<!-- special case for meta-role mod on role location -->
-<xsl:template match="location[@id and @mod]" mode="exts-to-rdf">
- <!-- add rdf:ID so we can refer back to this edge when adding the mod later -->
- <role:location rdf:ID="{generate-id()}" rdf:resource="#{@id}" />
+<!-- special case for meta-role mod on various roles -->
+<xsl:template match="*[@mod]" mode="exts-to-rdf" priority="1">
+ <!-- add rdf:ID so we can refer back to this edge when adding the mod later
+ -->
+ <xsl:element name="role:{local-name()}">
+  <xsl:attribute name="rdf:ID">
+   <xsl:value-of select="generate-id()" />
+  </xsl:attribute>
+  <xsl:choose>
+   <xsl:when test="@id">
+    <xsl:attribute name="rdf:resource">
+     <xsl:text>#</xsl:text><xsl:value-of select="@id" />
+    </xsl:attribute>
+   </xsl:when>
+   <xsl:otherwise>
+    <xsl:value-of select="." />
+   </xsl:otherwise>
+  </xsl:choose>
+ </xsl:element>
 </xsl:template>
 
 <!-- things that turn into leaf nodes in the RDF graph -->
-<xsl:template match="cell-line | epistemic-modality | location | from-location | to-location | coref | assoc-with | ptm | bound-to | equals | size | scale | poss-by | quantifier | quantity | over-quantity | time | amount" mode="exts-to-rdf">
+<xsl:template match="cell-line | epistemic-modality | location | from-location
+		     | to-location | coref | assoc-with | ptm | bound-to
+		     | equals | size | scale | poss-by | quantifier | quantity
+		     | over-quantity | time"
+	      mode="exts-to-rdf">
  <!-- NOTE: most of these always have @id, so they always take the first branch of rdf-leaf-node's choose. The exceptions are ptm and coref, which can take the second one. -->
  <!-- NOTE: ignoring (ptm|bound-to)/@event to make graph less busy -->
  <xsl:call-template name="rdf-leaf-node" />
@@ -243,8 +264,8 @@ William de Beaumont
 <xsl:template match="ekb" mode="exts-to-rdf">
  <rdf:RDF>
   <xsl:apply-templates mode="exts-to-rdf" />
-  <!-- special case for meta-role mod on role location -->
-  <xsl:for-each select=".//location[@id and @mod]">
+  <!-- special case for meta-role mod on various roles -->
+  <xsl:for-each select=".//*[@mod]">
    <rdf:Description rdf:about="#{generate-id()}">
     <role:mod><xsl:value-of select="@mod" /></role:mod>
    </rdf:Description>

@@ -73,8 +73,8 @@ http://stackoverflow.com/questions/8002352/how-to-control-subgraphs-layout-in-do
     <variable name="rdf">
      <rdf:RDF>
       <apply-templates select="key('utts', @uttnum)" mode="exts-to-rdf" />
-      <!-- special case for meta-role mod on role location -->
-      <for-each select="key('utts', @uttnum)//location[@id and @mod]">
+      <!-- special case for meta-role mod on various roles -->
+      <for-each select="key('utts', @uttnum)//*[@mod]">
        <rdf:Description rdf:about="#{generate-id()}">
 	<role:mod><value-of select="@mod" /></role:mod>
        </rdf:Description>
