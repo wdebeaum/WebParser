@@ -27,7 +27,16 @@ my $query = '';
 for my $key (keys %params) {
   my $clean_key = $key;
   $clean_key =~ s/[^\w-]/_/g;
-  $query .= " :$clean_key " . quote_for_kqml($params{$key});
+  my $val = $params{$key};
+  # if this param is a file upload, get the file content instead of the name
+  if ($request_method eq 'POST') {
+    my $fh = upload($key);
+    if (defined($fh)) {
+      local $/;
+      $val = <$fh>;
+    }
+  }
+  $query .= " :$clean_key " . quote_for_kqml($val);
 }
 $query = ":query ($query)" unless ($query eq '');
 my $reply_id = "web" . int(rand(10000));

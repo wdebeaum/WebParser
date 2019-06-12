@@ -161,6 +161,10 @@ function setTargets() {
    <input type="hidden" name="op" value="download" />
    <input type="submit" value="download edits" />
   </form>
+  <form action="lex-ont-edit" method="POST" enctype="multipart/form-data">
+   <input type="hidden" name="op" value="upload" />
+   <label>upload edits: <input type="file" name="arg" onchange="this.parentNode.parentNode.submit()" /></label>
+  </form>
  </xsl:if>
  <xsl:for-each select="WORD">
   <h2><xsl:value-of select="@name" /></h2>

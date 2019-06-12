@@ -72,7 +72,7 @@
             while (and next-char
 	               (or (alpha-char-p next-char)
 			   (digit-char-p next-char)
-			   (member next-char '(#\+ #\- #\_ #\$)))) ; TODO more?
+			   (member next-char '(#\+ #\- #\_ #\$ #\*)))) ; TODO more?
 	    collect (read-char s) into char-list
 	    finally (return (format nil "~:@(~{~c~}~)" char-list))
 	    ))

@@ -1006,6 +1006,21 @@ $(document).ready(function(){
     (otherwise tree)
     ))
 
+(defun do-define-type (dt)
+  (let ((*package* (find-package :om)))
+    (eval (cons 'om::define-type (cdr dt))))
+  ;; also add to WF's mapping hash table
+  (dolist (sk (util:find-arg dt :wordnet-sense-keys))
+    (wf::add-sense-key-to-ont-type-mapping sk (second dt)))
+  (setf *ont-edits* (nconc *ont-edits* (list dt)))
+  )
+
+(defun do-define-words (dw)
+  (let ((*package* (find-package :lxm)))
+    (eval (subst-pkg :lxm :webparser dw)))
+  (setf *lex-edits* (nconc *lex-edits* (list dw)))
+  )
+
 (defun add-ont-type-for-wn-sense (sk)
   (let* ((id (sense-key-to-id sk))
 	 (pct (position #\% sk))
@@ -1061,16 +1076,125 @@ $(document).ready(function(){
         ;(format t "~s~%~s~%" dt dw)
 	;; evaluate them with the correct symbol packages and current package
 	;; (just in case that matters), and save them
-        (let ((*package* (find-package :om)))
-	  (eval (cons 'om::define-type (cdr dt))))
-	;; also add to WF's mapping hash table
-	(wf::add-sense-key-to-ont-type-mapping sk new-ont-type)
-	(setf *ont-edits* (nconc *ont-edits* (list dt)))
-        (let ((*package* (find-package :lxm)))
-	  (eval (subst-pkg :lxm :webparser dw)))
-	(setf *lex-edits* (nconc *lex-edits* (list dw)))
+	(do-define-type dt)
+	(do-define-words dw)
 	;; tell the browser we succeeded
 	'(http 200 :content-type "text/plain" :content "added")))))
+
+(defun valid-sense-key-p (sk)
+  (let* ((*package* (find-package :wf)) ; paranoia
+	 (psk (proper-sense-key sk)))
+    (and psk (wf::get-synset-from-sense-key wf::wm psk))))
+
+(defun valid-gwd-word-p (w)
+  (typecase w
+    (symbol (eq (symbol-package w) (find-package :w)))
+    ;; TODO handle particle verbs like (w::look (w::up))?
+    (list (every
+	    (lambda (sw)
+	      (and (symbolp sw) (eq (symbol-package sw) (find-package :w))))
+	    w))
+    (otherwise nil)
+    ))
+
+(defun do-edits-from-string (edits-str)
+  "Validate all the edits in the given string, and then do them. Signal an
+   error if any edit is invalid."
+  (loop with exprs = (read-safely-from-string (format nil "(~a)" edits-str))
+	with ont-pkg = (find-package :ont)
+	with ont-table = (om::ling-ontology-lf-table om::*lf-ontology*)
+	with templ-table = (lxm::lexicon-db-synt-table lxm::*lexicon-data*)
+	with dts = nil
+	with dws = nil
+	with pkg = nil
+	for expr in exprs
+	unless (and (listp expr) (symbolp (car expr)))
+	  do (error "malformed expression:~%  ~s~%" expr)
+	do (handler-case
+	     ;; sooo much validation...
+	     (ecase (car expr)
+	       (in-package 
+		 (unless (= 2 (length expr))
+		   (error "expected exactly one argument to in-package"))
+		 (unless (member (second expr) '(:om :lxm))
+		   (error "expected in-package argument to be either :om or :lxm"))
+		 (setf pkg (second expr)))
+	       (define-type
+		 (unless (eq pkg :om)
+		   (error "expected define-type to be done in :om package"))
+		 (destructuring-bind (_ new-ont-type
+				      &key parent wordnet-sense-keys) expr
+		     (declare (ignore _))
+		   (unless (and (symbolp new-ont-type)
+				(eq (symbol-package new-ont-type) ont-pkg))
+		     (error "expected new ont type name to be a symbol in the ont package, but got ~s" new-ont-type))
+		   (when (or (gethash new-ont-type ont-table)
+			     (find new-ont-type dts :key #'second))
+		     (error "~s is already defined" new-ont-type))
+		   (unless (and (symbolp parent)
+				(eq (symbol-package parent) ont-pkg))
+		     (error "expected parent ont type name to be a symbol in the ont package, but got ~s" parent))
+		   (unless (or (gethash parent ont-table)
+			       (find parent dts :key #'second))
+		     (error "~s is not defined (yet)" parent))
+		   (unless (and (listp wordnet-sense-keys) (every #'stringp wordnet-sense-keys))
+		     (error "expected wordnet-sense-keys to be a list of strings, but got ~s" wordnet-sense-keys))
+		   (dolist (sk wordnet-sense-keys)
+		     (unless (valid-sense-key-p sk)
+		       (error "~s is not a valid WordNet 3.0 sense key" sk)))
+		   )
+		 (push expr dts))
+	       (define-words
+		 (unless (eq pkg :lxm)
+		   (error "expected define-type to be done in :lxm package"))
+		 (destructuring-bind (_ &key pos words) expr
+		     (declare (ignore _))
+		   (unless (member pos '(w::n w::v w::adj w::adv))
+		     (error "expected pos to be one of w::n w::v w::adj w::adv, but got ~s" pos))
+		   (dolist (word words)
+		     (unless (and (listp word) (= 2 (length word)))
+		       (error "expected a list of length 2, but got ~s" word))
+		     (unless (valid-gwd-word-p (car word))
+		       (error "~s is not a valid word specification" (car word)))
+		     (unless (and (listp (second word))
+				  (eq 'senses (car (second word))))
+		       (error "expected a list starting with 'senses, but got ~s" (second word)))
+		     (dolist (sense (cdr (second word)))
+		       (unless (and (listp sense) (= 2 (length sense))
+				    (listp (first sense))
+				    (= 2 (length (first sense)))
+				    (eq 'lf-parent (car (first sense)))
+				    (symbolp (second (first sense)))
+				    (eq (symbol-package (second (first sense)))
+					ont-pkg)
+				    (= 2 (length (second sense)))
+				    (eq 'templ (car (second sense)))
+				    (symbolp (second (second sense)))
+				    (eq (symbol-package (second (second sense)))
+					*package*))
+			 (error "expected a sense of the form ((LF-PARENT ONT::foo) (TEMPL foo-templ)), but got ~s" sense))
+		       (unless (or (gethash (second (first sense)) ont-table)
+				   (find (second (first sense)) dts
+					 :key #'second))
+			 (error "~s is not defined (yet)" (second (first sense))))
+		       (unless (gethash (intern (symbol-name (second (second sense))) :lxm) templ-table)
+			 (error "~s is not defined" (second (second sense))))
+		       )
+		     )
+		   )
+		 (push expr dws))
+	       )
+	     (error (err)
+	       (error "~a~%  in expression:~%    ~s~%" err expr))
+	     )
+	finally ;; now we know all the edits are valid, and in dts and dws
+	  (dolist (dt (nreverse dts))
+	    (do-define-type dt))
+	  (dolist (dw (nreverse dws))
+	    (do-define-words dw))
+	)
+  ;; tell the browser we succeeded
+  '(http 200 :content-type "text/plain" :content "uploaded"))
 
 (defun handle-lex-ont-edit (msg query)
   (destructuring-bind (&key op arg) query
@@ -1081,6 +1205,8 @@ $(document).ready(function(){
 	     :content-type "text/x-common-lisp"
 	     :content-disposition "attachment; filename=\"domain-words.lisp\""
 	     :content ,(format nil "(in-package :om)~%~%~{~s~%~%~}(in-package :lxm)~%~%~{~s~%~%~}" *ont-edits* *lex-edits*)))
+	((equalp op "upload")
+	  (do-edits-from-string arg))
 	((equalp op "add-ont-type-for-wn-sense")
 	  (let ((sk (proper-sense-key arg)))
 	    (cond
