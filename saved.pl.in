@@ -1,0 +1,213 @@
+#!/usr/bin/perl -T
+
+use CGI qw(param header);
+
+my $www_dir = 'WWW_DIR';
+my $saved_dir = $www_dir . '/saved';
+
+print header(-type => 'text/html', -charset => 'UTF-8');
+
+sub normalize_words {
+  my @words = map { lc($_) } @{[$_[0] =~ /[\p{L}\d]+/g]};
+  return join(' ', @words);
+}
+
+# read the input attribute from an XML file
+my %fn2input = ();
+sub read_input_from_xml {
+  my $fn = shift;
+  # check the cache
+  return $fn2input{$fn} if (exists($fn2input{$fn}));
+  # read just enough of the file to get the input
+  open F, "<$saved_dir/$fn" or die "can't open saved parse $fn: $!";
+  my $input = '';
+  while (<>) {
+    if (/ input="/) {
+      $input = $_;
+      last;
+    }
+  }
+  unless ($input =~ s/">//) {
+    while (<>) {
+      my $done = (s/">//);
+      $input .= $_;
+      last if ($done);
+    }
+  }
+  close F;
+  # unescape XML
+  $input =~ s/&quot;/"/g;
+  $input =~ s/&lt;/</g;
+  $input =~ s/&gt;/>/g;
+  $input =~ s/&amp;/&/g;
+  # save in the cache
+  $fn2input{$fn} = $input;
+  return $input;
+}
+
+sub options {
+  my ($value, $values, $labels) = @_;
+  print qq( <option) . (($value eq 'any') ? ' selected' : '') . qq(>any</option>\n);
+  for my $i (0..$#$values) {
+    my $selected = (($value eq $values->[$i]) ? ' selected' : '');
+    if ($labels) {
+      print qq( <option value="$values->[$i]"$selected>$labels->[$i]</option>\n);
+    } else {
+      print qq( <option$selected>$values->[$i]</option>\n);
+    }
+  }
+}
+
+eval {
+  my $after = param('after');
+  my $before = param('before');
+  my $system = param('system');
+  my $judge = param('judge');
+  my $judgement = param('judgement');
+  my $input_contains = param('input-contains');
+  my @rows = ();
+  my @systems = ();
+  my @judges = ();
+  my $get_rows = 0;
+  if (defined($after)) { # have params
+    unless ($after eq '') {
+      $after =~ /^\d{4}-\d\d-\d\d$/ or die "malformed after date";
+      $after = $&;
+    }
+    unless ($before eq '') {
+      $before =~ /^\d{4}-\d\d-\d\d$/ or die "malformed before date";
+      $before = $&;
+    }
+    $system =~ /^\w+$/ or die "malformed system";
+    $system = $&;
+    $judge =~ /^\w+$/ or die "malformed judge";
+    $judge = $&;
+    $judgement =~ /^(any|(not-)?none|gt0|\d+)$/ or die "malformed judgement";
+    $judgement = $&;
+    $input_contains = normalize_words($input_contains);
+    $get_rows = 1;
+  } else { # defaults
+    $after = '';
+    $before = '';
+    $system = 'any';
+    $judge = 'any';
+    $judgement = 'any';
+    $input_contains = '';
+  }
+  my $after_num = $after;
+  $after_num =~ s/-//g;
+  my $before_num = $before;
+  $before_num =~ s/-//g;
+  my %latest = (); # map $system-$fn_input => [$fn] for the latest file with that full input
+  opendir D, $saved_dir or die "can't open saved parses directory: $!";
+  FN: while (my $fn = readdir D) {
+    # parse filename
+    next unless ($fn =~ /^(\d{8}T\d{6})-(\w+)-(\w+)-(none|\d+)-([\w-]+)\.xml$/);
+    my ($fn_time, $fn_system, $fn_judge, $fn_judgement, $fn_input) =
+       ($1, $2, $3, $4, $5);
+    # collect distinct systems and judges for <select>s
+    push @systems, $fn_system unless (grep { $_ eq $fn_system } @systems);
+    push @judges, $fn_judge unless (grep { $_ eq $fn_judge } @judges);
+    if ($get_rows) {
+      # make sure we only show the latest result for a given system and input
+      # (regardless of whether the search parameters would have selected it)
+      if (exists($latest{"$system-$fn_input"})) { # we might have seen the same input for this system before
+	my $prev = $latest{"$system-$fn_input"};
+	# read the new file and each old file to see if the full input matches
+	my $new_input = read_input_from_xml($fn);
+	my $found = 0;
+	for my $i (0..$#$prev) {
+	  my $old_fn = $prev->[$i];
+	  my $old_input = read_input_from_xml($old_fn);
+	  if ($old_input eq $new_input) { # old and new have same input
+	    $found = 1;
+	    if ($old_fn lt $fn) { # $old_fn is in fact older, replace it
+	      @rows = grep(!/\Q$old_fn\E/, @rows);
+	      $prev->[$i] = $fn;
+	      last;
+	    } else { # $old_fn is newer, skip this FN
+	      next FN;
+	    }
+	  }
+	}
+	# if none of the previous results had the same input, just add this fn
+	push @$prev, $fn unless ($found);
+      } else { # definitely never saw this system+input before
+	$latest{"$system-$fn_input"} = [$fn];
+      }
+      # check this file against the parameters
+      $fn_date = substr($fn_time, 0, 8);
+      next unless ($after eq '' or $fn_date >= $after_num);
+      next unless ($before eq '' or $fn_date <= $before_num);
+      next unless ($system eq 'any' or $system eq $fn_system);
+      next unless ($judge eq 'any' or $judge eq $fn_judge);
+      next unless ($judgement eq 'any' or $judgement eq $fn_judgement or
+                   ($judgement eq 'gt0' and $fn_judgement > 0) or
+		   ($judgement eq 'not-none' and $fn_judgement ne 'none'));
+      if ($input_contains ne '') {
+	my $norm_input = normalize_words($fn_input);
+	unless ($norm_input =~ /\Q$input_contains\E/) {
+	  my $input = read_input_from_xml($fn);
+	  $norm_input = normalize_words($input);
+	  next unless ($norm_input =~ /\b\Q$input_contains\E\b/);
+	}
+      }
+      # prettify judgement
+      my $pretty_judgement;
+      if ($fn_judgement eq 'none') {
+	$pretty_judgement = 'all hypotheses incorrect';
+      } else {
+	$pretty_judgement = "hypothesis #$fn_judgement correct";
+      }
+      # prettify input
+      my $pretty_input = $fn_input;
+      $pretty_input =~ s/_/ /g;
+      $pretty_input .= '...' if (length($pretty_input) == 40);
+      # add the table row for this saved parse
+      unshift @rows, qq( <tr><td>$fn_time</td><td>$fn_system</td><td>$fn_judge</td><td class="judgement correct-$fn_judgement">$pretty_judgement</td><td>$pretty_input</td><td><a href="../saved/$fn">view</a></td>\n);
+    }
+  }
+  closedir D;
+  print <<EOHTML;
+<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<title>Saved Parses</title>
+<style type="text/css">
+table { border-collapse: collapse; }
+td, th { border: 1px solid black; padding: 1ex; }
+.judgement { background: #ff7; }
+.judgement.correct-none { background: #f77; }
+.judgement.correct-0 { background: #7f7; }
+</style>
+</head><body>
+<h1>Saved Parses</h1>
+<form>
+<label>After: <input type="date" name="after" value="$after"></label>
+<label>Before: <input type="date" name="before" value="$before"></label>
+<label>System: <select name="system">
+EOHTML
+  options($system, \@systems);
+  print <<EOHTML;
+</select></label>
+<label>Judge: <select name="judge">
+EOHTML
+  options($judge, \@judges);
+  print <<EOHTML;
+</select></label>
+<label>Judgement: <select name="judgement">
+EOHTML
+  options($judgement, [qw(none 0 gt0 not-none)], ['all hypotheses incorrect', 'first hypothesis correct', 'non-first hypothesis correct', 'some hypothesis correct']);
+  print <<EOHTML;
+</select></label>
+<label>Input contains: <input type="text" name="input-contains" value="$input_contains"></label>
+<input type="submit">
+</form>
+<table>
+<tr><th>save timestamp</th><th>system</th><th>judge</th><th>judgement</th><th>input</th><th>link</th><tr>
+@rows
+</table>
+</body></html>
+EOHTML
+} || print "<!DOCTYPE html>\n<html><head><title>Error querying saved parses</title></head><body>Error querying saved parses: <pre>$@</pre></body></html>";
+
