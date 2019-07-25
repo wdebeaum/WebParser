@@ -59,7 +59,7 @@ install-cgi: dot-htaccess web-parser-xml.cgi dot-to-svg.pl install-image
 
 dot-htaccess:
 	( case `hostname` in \
-	    b01.cs.rochester.edu) ;; \
+	    *.cs.rochester.edu) ;; \
 	    *) echo 'Options ExecCGI' ;; \
 	  esac ; \
 	  echo 'SetHandler cgi-script' \
