@@ -22,7 +22,20 @@ eval {
   $q->param('results') =~ /^<\?xml .*?<trips-parser-output([^>]+)>.*$/s or die "expected a trips-parser-output XML file in results";
   my ($results, $attrs) = ($&, $1);
   $results =~ /<\/trips-parser-output>\s*$/ or die "missing closing tag of trips-parser-output, or there is junk at the end of results";
-  $attrs =~ / system="(\w+)"/ or die "missing system attribute on trips-parser-output element in results";
+  my $comments = $q->param('comments');
+  if ($comments =~ /\S.*/s) {
+    $comments = $&;
+    # XML-escape comments
+    $comments =~ s/&/&amp;/g;
+    $comments =~ s/</&lt;/g;
+    $comments =~ s/>/&gt;/g;
+    $comments =~ s/"/&quot;/g;
+    $comments =~ s/\s/"&#" . ord($&) . ";"/ge;
+    # insert it as an attribute in the results
+    $results =~
+      s/<trips-parser-output/<trips-parser-output comments="$comments"/;
+  }
+  $attrs =~ / system="([\w-]+)"/ or die "missing system attribute on trips-parser-output element in results";
   my $system = $1;
   $attrs =~ / input="([^"]+)"/ or die "missing input attribute on trips-parser-output element in results";
   my $input = $1;
