@@ -134,6 +134,7 @@ ENVSH
       sbcl \
       openjdk-11-jdk \
       perl \
+      ruby \
       xsltproc \
       sqlite3 \
       libdbd-sqlite3-perl \
@@ -189,16 +190,16 @@ ENVSH
     node=''
     # set the above variables according to $TRIPS_SYSTEM
     case "$TRIPS_SYSTEM" in
-      step) TRIPS_ARGS='-display none'; packages='python ruby'; geonames=y;;
+      step) TRIPS_ARGS='-display none'; packages='python'; geonames=y;;
       cogent) packages='aspell-en';;
       cabot) packages='python aspell-en';;
       bob) packages="aspell-en libset-scalar-perl $ekb_packages"; geonames=y; enju=y;;
-      drum) packages="ruby libset-scalar-perl $ekb_packages" geonames=y; enju=y;;
+      drum) packages="libset-scalar-perl $ekb_packages" geonames=y; enju=y;;
       musica) ;;
       cwmsreader)
         TRIPS_EXE=trips-cwms
 	TRIPS_ARGS='-nouser -reader'
-        packages="python python-pip virtualenv ruby aspell-en $ekb_packages"
+        packages="python python-pip virtualenv aspell-en $ekb_packages"
 	geonames=y
 	node=y
 	# avoid JavaFX on java 11/buster (don't need it for web stuff)
