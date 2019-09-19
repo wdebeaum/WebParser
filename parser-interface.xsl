@@ -777,7 +777,7 @@
 	  </ul>
 	 </xsl:if>
 	 <xsl:if test="@number-parses-desired">
-	  <label>Number of parsing hypotheses desired: <input type="number" name="number-parses-desired" min="1" max="10" value="{@number-parses-desired}" /></label>
+	  <label>Number of parsing hypotheses desired: <input type="number" name="number-parses-desired" min="1" max="20" value="{@number-parses-desired}" /></label>
 	 </xsl:if>
 	</div>
        </xsl:if>

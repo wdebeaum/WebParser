@@ -204,7 +204,7 @@
 		     		  (< 0 (length number-parses-desired))
 				  (every #'digit-char-p number-parses-desired))
 		       (let ((npd (parse-integer number-parses-desired)))
-		         (when (>= 10 npd) ; avoid DoS
+		         (when (>= 20 npd) ; avoid DoS
 			   `(((parser::number-parses-desired parser::*chart*)
 				,npd)))))
 		   )
