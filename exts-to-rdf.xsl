@@ -85,8 +85,8 @@ William de Beaumont
 </xsl:template>
 
 <!-- simple leaf values -->
-<xsl:template match="active | negation | polarity | modality | spec | unit |
-		     min | max | amount[not(@id)] | value[not(@id)]"
+<xsl:template match="tense | active | negation | polarity | modality | spec |
+		     unit | min | max | amount[not(@id)] | value[not(@id)]"
 	      mode="exts-to-rdf">
  <xsl:element name="role:{local-name()}">
   <xsl:value-of select="." />
@@ -209,7 +209,7 @@ William de Beaumont
 <xsl:template match="cell-line | epistemic-modality | location | from-location
 		     | to-location | coref | assoc-with | ptm | bound-to
 		     | equals | size | scale | poss-by | quantifier | quantity
-		     | over-quantity | time"
+		     | over-quantity | time | refset | from-time | to-time"
 	      mode="exts-to-rdf">
  <!-- NOTE: most of these always have @id, so they always take the first branch of rdf-leaf-node's choose. The exceptions are ptm and coref, which can take the second one. -->
  <!-- NOTE: ignoring (ptm|bound-to)/@event to make graph less busy -->
