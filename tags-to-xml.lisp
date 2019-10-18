@@ -94,6 +94,9 @@
     :members (list-of dsi)
     )
   ;; CWMS
+  (place
+    :id foreign-symbol
+    :matches matches)
   (capital
     :name string
     :country symbol
