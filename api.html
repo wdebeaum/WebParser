@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="cvsId" content="$Id: api.html,v 1.32 2019/10/21 14:41:56 wdebeaum Exp $">
+<meta name="cvsId" content="$Id: api.html,v 1.33 2019/10/21 15:04:52 wdebeaum Exp $">
 <meta charset="UTF-8">
 <title>TRIPS Parser Web API Documentation</title>
 <style type="text/css">
@@ -262,9 +262,9 @@ This never actually gets out of TextTagger, since the tag only has domain-specif
 <tr class="first"><th rowspan="2"><code>&lt;pitch-sequence&gt;</code></th><td class="spacer"></td><td>Sequence of musical pitches. It's unspecified whether this is melody or harmony.</td></tr>
 <tr><td><code>&lt;members&gt;</code></td><td>Contains the <code>&lt;pitch&gt;</code>es in the sequence.</td></tr>
 
-<tr class="first"><th rowspan="4"><code>&lt;place&gt;</code></th><td class="spacer"></td><td>Generalized place in the world.</td></tr>
+<tr class="first"><th rowspan="3"><code>&lt;place&gt;</code></th><td class="spacer"></td><td>Generalized place in the world.</td></tr>
 <tr><td><code>id</code></td><td>Identifier for a place, prefixed with the resource it's defined in.</td></tr>
-<tr><td><code>class, code</code></td><td>The kind of place it is. Uses either <a href="https://www.geonames.org/export/codes.html">GNO's feature classes and codes</a> or GNIS' FEATURE_CLASS column (for the latter <code>code</code> is not present).</td></tr>
+<!-- tr><td><code>class, code</code></td><td>The kind of place it is. Uses either <a href="https://www.geonames.org/export/codes.html">GNO's feature classes and codes</a> or GNIS' FEATURE_CLASS column (for the latter <code>code</code> is not present).</td></tr -->
 <tr><td><code>&lt;match ... /&gt;</code></td><td>See the same element under <code>&lt;term&gt;</code> above.</td></tr>
 
 <tr class="first"><th rowspan="4"><code>&lt;capital&gt;</code></th><td class="spacer"></td><td>Capital of a country.</td></tr>
