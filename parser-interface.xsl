@@ -630,6 +630,9 @@
 	  <xsl:if test="@system = 'WEB-TOOLS' or @system = 'STEP'">
 	   <li title="Tags personal names, with their gender if it's not too ambiguous. Uses the SSA names list."><label><input type="checkbox" /> personal_names</label></li>
 	  </xsl:if>
+	  <xsl:if test="@system = 'WEB-TOOLS' or @system = 'CWMS'">
+	   <li title="Looks up place names from several resources (including those of the Countries and Terms taggers, among others), in a similar way to the Drum tagger."><label><input type="checkbox" /> place_names</label></li>
+	  </xsl:if>
 	  <li title="Tags certain (often abbreviated) phrases occurring in prescriptions as either adjectives or adverbs."><label><input type="checkbox" /> prescriptions</label></li>
 	  <li title="Tags each punctuation character."><label><input type="checkbox" /> punctuation</label></li>
 	  <li title="Tags double-quoted strings."><label><input type="checkbox" /> quotations</label></li>
@@ -670,7 +673,7 @@
 	  </xsl:choose>
 	  <li title="Uses the Geo::StreetAddress::US Perl module to tag anything that could be the first line of a US address (e.g. &quot;40 S. Alcaniz St.&quot;)."><label><input type="checkbox" /> street_addresses</label></li>
 	  <xsl:if test="@system != 'CABOT'">
-	   <li title="Tags any substring that matches a name in the GNIS database as a named-entity with type ONT::geographic-region."><label><input type="checkbox" /> terms</label> (geographic names)</li>
+	   <li title="Tags any substring that matches a name in the GNIS database as a named-entity with type ONT::geographic-region."><label><input type="checkbox" /> terms</label> (US geographic names)</li>
 	  </xsl:if>
 	  <li title="Tags anything matching the :lex (or :text) argument of any of the tags from the :input-terms list with a copy of the matching tag(s)."><label><input type="checkbox" /> terms_input</label></li>
 	  <li title="Tags non-first variants in slash- or ampersand-separated lists of variants like &quot;Smad1/5/8&quot; as alternate spellings that include the prefix, like &quot;5&quot; -> &quot;Smad5&quot; and &quot;8&quot; -> &quot;Smad8&quot;. The Words tagger should already get the first one, &quot;Smad1&quot;."><label><input type="checkbox" /> variant_lists</label></li>
