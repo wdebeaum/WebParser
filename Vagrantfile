@@ -272,15 +272,6 @@ ENVSH
 	)
 	index-file.names=("index.html")
 LIGHTTPDCONF
-    # fetch ancient jQuery from IHMC
-    # FIXME 1: this should be in Makefile-component
-    # FIXME 2: we should use newer jQuery and fetch from the original source
-    cd $TRIPS_BASE
-    mkdir -p www/jquery
-    cd www/jquery
-    for f in jquery.autocomplete.css jquery.autocomplete.js jquery.bgiframe.min.js jquery.dimensions.js jquery-latest.js ; do
-      curl -sS -O http://trips.ihmc.us/parser/jquery/$f
-    done
   CS
 
   config.vm.provision "build", type: "shell", privileged: false, keep_color: true, inline: <<-BUILD
@@ -296,8 +287,6 @@ LIGHTTPDCONF
     # make sure the cgi script for the chosen system is really installed (step
     # and cwmsreader break the pattern):
     ./install-cgi.pl $TRIPS_BASE/www/cgi $TRIPS_SYSTEM
-    # also install a cgi script for lex-ont
-    ./install-cgi.pl $TRIPS_BASE/www/cgi lex-ont
     # also add an index page:
     cat >$TRIPS_BASE/www/index.html <<-INDEX
       <html>
