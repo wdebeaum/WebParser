@@ -66,7 +66,16 @@
 
  <xsl:template match="word">
   <xsl:if test="position() > 1"><xsl:text> </xsl:text></xsl:if>
-  <a href="../../lexicon/data/W::{.}.xml">
+  <a>
+   <xsl:choose>
+    <xsl:when test="/trips-parser-output/@system = 'GLOSS'">
+     <xsl:attribute name="href">lex-ont?side=lex&amp;q=<xsl:value-of select="." /></xsl:attribute>
+     <xsl:attribute name="target">lexicon</xsl:attribute>
+    </xsl:when>
+    <xsl:otherwise>
+     <xsl:attribute name="href">http://www.cs.rochester.edu/research/trips/lexicon/data/W::<xsl:value-of select="." />.xml</xsl:attribute>
+    </xsl:otherwise>
+   </xsl:choose>
    <xsl:value-of select="." />
   </a>
  </xsl:template>

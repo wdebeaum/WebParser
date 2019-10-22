@@ -50,8 +50,17 @@ William de Beaumont
 </xsl:template>
 
 <xsl:template name="trips-ont-link">
- <a href="http://www.cs.rochester.edu/research/trips/lexicon/cgi/browseontology-ajax?search={.}#highlight">
- <xsl:text>ONT::</xsl:text><xsl:value-of select="." />
+ <a>
+  <xsl:choose>
+   <xsl:when test="/trips-parser-output/@system = 'GLOSS'">
+    <xsl:attribute name="href">lex-ont?side=ont&amp;q=<xsl:value-of select="." /></xsl:attribute>
+    <xsl:attribute name="target">ontology</xsl:attribute>
+   </xsl:when>
+   <xsl:otherwise>
+    <xsl:attribute name="href">http://www.cs.rochester.edu/research/trips/lexicon/cgi/browseontology-ajax?search=<xsl:value-of select="." />#highlight</xsl:attribute>
+   </xsl:otherwise>
+  </xsl:choose>
+  <xsl:text>ONT::</xsl:text><xsl:value-of select="." />
  </a>
 </xsl:template>
 
@@ -60,8 +69,17 @@ William de Beaumont
 </xsl:template>
 
 <xsl:template name="trips-lex-link">
- <a href="http://www.cs.rochester.edu/research/trips/lexicon/data/W::{.}.xml">
- <xsl:text>W::</xsl:text><xsl:value-of select="." />
+ <a>
+  <xsl:choose>
+   <xsl:when test="/trips-parser-output/@system = 'GLOSS'">
+    <xsl:attribute name="href">lex-ont?side=lex&amp;q=<xsl:value-of select="." /></xsl:attribute>
+    <xsl:attribute name="target">lexicon</xsl:attribute>
+   </xsl:when>
+   <xsl:otherwise>
+    <xsl:attribute name="href">http://www.cs.rochester.edu/research/trips/lexicon/data/W::<xsl:value-of select="." />.xml</xsl:attribute>
+   </xsl:otherwise>
+  </xsl:choose>
+  <xsl:text>W::</xsl:text><xsl:value-of select="." />
  </a>
 </xsl:template>
 
