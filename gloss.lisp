@@ -36,6 +36,7 @@
  <option>ADV</option>
 </select></label>
 <label>Word: <input name=\"word\"></label>
+<label>Supertype: ONT::<input name=\"supertype\"></label>
 <br>
 <label>Definition: <input name=\"def\" size=\"40\"></label>
 <br>
@@ -68,7 +69,7 @@
       (declare (ignore _))
     (format nil "<a id=\"result\" href=\"lex-ont?side=ont&q=~(~a~)\" target=\"ontology\">~s</a><script type=\"text/javascript\">document.body.onload=function() { document.getElementById('result').click(); }</script>" (symbol-name ont-type) ont-type)))
 
-(defun handle-process-new-definition (msg pos word def)
+(defun handle-process-new-definition (msg pos word supertype def)
   (cond
     ((or (null pos) (null word) (null def)
          (string= "" pos) (string= "" word) (string= "" def))
@@ -77,12 +78,17 @@
       (process-new-definition-form msg 400 "pos must be one of N, V, ADJ, or ADV"))
     ((not (every #'alpha-char-p word))
       (process-new-definition-form msg 400 "word must contain only alphabetic characters"))
+    ((not (every (lambda (c) (or (alpha-char-p c) (digit-char-p c) (member c '(#\- #\_) :test #'char=))) supertype))
+      (process-new-definition-form msg 400 "supertype must contain only alphanumeric characters, dashes, or underscores"))
     (t
       (send-msg-with-continuation
 	`(request :content (process-new-definition
 	    :word ,(intern (string-upcase word))
 	    :pos ,(intern pos)
-	    :type nil
+	    :type ,(if (string= "" supertype)
+		     nil
+		     (intern (string-upcase supertype) :ont)
+		     )
 	    :definition ,def
 	    ))
 	(lambda (reply-msg)
@@ -112,10 +118,10 @@
       ))
 
 (defun handle-glossenstein (msg query)
-  (destructuring-bind (&key op pos word def wn-sense-key &allow-other-keys) query
+  (destructuring-bind (&key op pos word supertype def wn-sense-key &allow-other-keys) query
     (cond
       ((equalp op "process-new-definition")
-	(handle-process-new-definition msg pos word def))
+	(handle-process-new-definition msg pos word supertype def))
       ((equalp op "process-gloss")
 	(handle-process-gloss msg wn-sense-key))
       (t (glossenstein-frameset msg))
