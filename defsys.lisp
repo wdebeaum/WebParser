@@ -32,6 +32,7 @@
 		      "utterance"
 		      "safe-reader"
 		      "lex-ont"
+		      "gloss"
 		      "messages"
 		    )))
 

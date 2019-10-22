@@ -1,0 +1,115 @@
+(in-package :webparser)
+
+(defun glossenstein-frameset (msg)
+  (reply-to-msg msg 'tell :content '(http 200
+    :content-type "text/html; charset=utf-8"
+    :content "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Frameset//EN\"
+<HTML><HEAD><TITLE>Glossenstein</TITLE></HEAD>
+<FRAMESET cols=\"34%, 33%, 33%\">
+ <FRAMESET rows=\"20%, 20%, 60%\">
+  <FRAME src=\"glossenstein?op=process-new-definition\" name=\"process-new-definition\">
+  <FRAME src=\"glossenstein?op=process-gloss\" name=\"process-gloss\">
+  <FRAME src=\"gloss\" name=\"parser\">
+ </FRAMESET>
+ <FRAMESET rows=\"50%, 50%\">
+  <FRAME src=\"lex-ont?side=lex\" name=\"lexicon\">
+  <FRAME src=\"lex-ont?side=ont&ret=xml&q=root\" name=\"ont-type-details\">
+ </FRAMESET>
+ <FRAME src=\"lex-ont?side=ont\" name=\"ontology\">
+</FRAMESET>
+</HTML>
+")))
+
+(defun process-new-definition-form (msg &optional (status 200) status-text)
+  (reply-to-msg msg 'tell :content `(http ,status
+    :content-type "text/html; charset=utf-8"
+    :content ,(format nil "<!DOCTYPE html>
+<html><head><title>process-new-definition form</title></head><body>
+<h2>Process New Definition</h2>
+<form action=\"#\">
+<input type=\"hidden\" name=\"op\" value=\"process-new-definition\">
+<label>POS:
+<select name=\"pos\">
+ <option>N</option>
+ <option selected>V</option>
+ <option>ADJ</option>
+ <option>ADV</option>
+</select></label>
+<label>Word: <input name=\"word\"></label>
+<br>
+<label>Definition: <input name=\"def\" size=\"40\"></label>
+<br>
+<input type=\"submit\" value=\"Process!\">
+<br>
+~a
+</form>
+</body></html>
+" (if status-text (escape-for-xml nil status-text) "")))))
+
+(defun process-gloss-form (msg &optional (status 200) status-text)
+  (reply-to-msg msg 'tell :content `(http ,status
+    :content-type "text/html; charset=utf-8"
+    :content ,(format nil "<!DOCTYPE html>
+<html><head><title>process-gloss form</title></head><body>
+<h2>Process Gloss</h2>
+<form action=\"#\">
+<input type=\"hidden\" name=\"op\" value=\"process-gloss\">
+<label>WordNet sense key: <input name=\"wn-sense-key\"></label>
+<input type=\"submit\" value=\"Process!\">
+<br>
+~a
+</form>
+</body></html>
+" (if status-text (escape-for-xml nil status-text) "")))))
+
+(defun handle-process-new-definition (msg pos word def)
+  (cond
+    ((or (null pos) (null word) (null def)
+         (string= "" pos) (string= "" word) (string= "" def))
+      (process-new-definition-form msg))
+    ((not (member pos '("N" "V" "ADJ" "ADV") :test #'string=))
+      (process-new-definition-form msg 400 "pos must be one of N, V, ADJ, or ADV"))
+    ((not (every #'alpha-char-p word))
+      (process-new-definition-form msg 400 "word must contain only alphabetic characters"))
+    (t
+      (send-msg-with-continuation
+	`(request :content (process-new-definition
+	    :word ,(intern (string-upcase word))
+	    :pos ,(intern pos)
+	    :type nil
+	    :definition ,def
+	    ))
+	(lambda (reply-msg)
+	  (if (eq 'sorry (car reply-msg))
+	    (process-new-definition-form msg 500 (find-arg-in-act reply-msg :comment))
+	    (process-new-definition-form msg 200 (format nil "processed new definition of ~a" word))
+	    ))
+	))
+    ))
+
+(defun handle-process-gloss (msg wn-sense-key)
+  (if (null wn-sense-key)
+    (process-gloss-form msg))
+    (setf wn-sense-key (proper-sense-key wn-sense-key))
+    (if (null wn-sense-key)
+      (process-gloss-form msg 400 "malformed sense key")
+      (send-msg-with-continuation
+	`(request :content (process-gloss :sense ,wn-sense-key))
+	(lambda (reply-msg)
+	  (if (eq 'sorry (car reply-msg))
+	    (process-gloss-form msg 500 (find-arg-in-act reply-msg :comment))
+	    (process-gloss-form msg 200 (format nil "processed gloss of ~a" wn-sense-key))
+	    ))
+	)
+      ))
+
+(defun handle-glossenstein (msg query)
+  (destructuring-bind (&key op pos word def wn-sense-key &allow-other-keys) query
+    (cond
+      ((equalp op "process-new-definition")
+	(handle-process-new-definition msg pos word def))
+      ((equalp op "process-gloss")
+	(handle-process-gloss msg wn-sense-key))
+      (t (glossenstein-frameset msg))
+      )))
+

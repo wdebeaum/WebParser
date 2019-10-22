@@ -116,6 +116,8 @@
         (return-from handle-http-request (handle-lex-ont-edit msg query)))
       (when (string= uri-basename "get-word-def")
         (return-from handle-http-request (handle-get-word-def msg query)))
+      (when (string= uri-basename "glossenstein")
+        (return-from handle-http-request (handle-glossenstein msg query)))
 ;      (unless (member uri-basename '("parse" "drum") :test #'string=)
 ;	(error "bogus request uri: ~s" request-uri))
       (destructuring-bind ( &key input
