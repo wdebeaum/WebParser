@@ -20,7 +20,7 @@
 </HTML>
 ")))
 
-(defun process-new-definition-form (msg &optional (status 200) status-text)
+(defun process-new-definition-form (msg &optional (status 200) (status-text ""))
   (reply-to-msg msg 'tell :content `(http ,status
     :content-type "text/html; charset=utf-8"
     :content ,(format nil "<!DOCTYPE html>
@@ -40,13 +40,12 @@
 <label>Definition: <input name=\"def\" size=\"40\"></label>
 <br>
 <input type=\"submit\" value=\"Process!\">
-<br>
-~a
 </form>
+~a
 </body></html>
-" (if status-text (escape-for-xml nil status-text) "")))))
+" status-text))))
 
-(defun process-gloss-form (msg &optional (status 200) status-text)
+(defun process-gloss-form (msg &optional (status 200) (status-text ""))
   (reply-to-msg msg 'tell :content `(http ,status
     :content-type "text/html; charset=utf-8"
     :content ,(format nil "<!DOCTYPE html>
@@ -56,11 +55,18 @@
 <input type=\"hidden\" name=\"op\" value=\"process-gloss\">
 <label>WordNet sense key: <input name=\"wn-sense-key\"></label>
 <input type=\"submit\" value=\"Process!\">
-<br>
-~a
 </form>
+~a
 </body></html>
-" (if status-text (escape-for-xml nil status-text) "")))))
+" status-text))))
+
+(defun show-type-from-reply (reply-msg)
+  (let* ((reply-content (find-arg-in-act reply-msg :content))
+         (def (second reply-content))
+	 (_ (when (consp (car def)) (setf def (car def))))
+	 (ont-type (find-arg-in-act def :trips-type)))
+      (declare (ignore _))
+    (format nil "<a id=\"result\" href=\"lex-ont?side=ont&q=~(~a~)\" target=\"ontology\">~s</a><script type=\"text/javascript\">document.body.onload=function() { document.getElementById('result').click(); }</script>" (symbol-name ont-type) ont-type)))
 
 (defun handle-process-new-definition (msg pos word def)
   (cond
@@ -81,9 +87,10 @@
 	    ))
 	(lambda (reply-msg)
 	  (if (eq 'sorry (car reply-msg))
-	    (process-new-definition-form msg 500 (find-arg-in-act reply-msg :comment))
-	    (process-new-definition-form msg 200 (format nil "processed new definition of ~a" word))
+	    (process-new-definition-form msg 500 (escape-for-xml nil (find-arg-in-act reply-msg :comment)))
+	    (process-new-definition-form msg 200 (format nil "processed new definition of ~a<br>~a" word (show-type-from-reply reply-msg)))
 	    ))
+	:content-only nil
 	))
     ))
 
@@ -97,9 +104,10 @@
 	`(request :content (process-gloss :sense ,wn-sense-key))
 	(lambda (reply-msg)
 	  (if (eq 'sorry (car reply-msg))
-	    (process-gloss-form msg 500 (find-arg-in-act reply-msg :comment))
-	    (process-gloss-form msg 200 (format nil "processed gloss of ~a" wn-sense-key))
+	    (process-gloss-form msg 500 (escape-for-xml nil (find-arg-in-act reply-msg :comment)))
+	    (process-gloss-form msg 200 (format nil "processed gloss of ~a<br>~a" wn-sense-key (show-type-from-reply reply-msg)))
 	    ))
+	:content-only nil
 	)
       ))
 
