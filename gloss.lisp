@@ -35,10 +35,10 @@
  <option>ADJ</option>
  <option>ADV</option>
 </select></label>
-<label>Word: <input name=\"word\"></label>
+<label>Word: <input name=\"word\" required></label>
 <label>Supertype: ONT::<input name=\"supertype\"></label>
 <br>
-<label>Definition: <input name=\"def\" size=\"40\"></label>
+<label>Definition: <input name=\"def\" size=\"40\" required></label>
 <br>
 <input type=\"submit\" value=\"Process!\">
 </form>
@@ -54,7 +54,7 @@
 <h2>Process Gloss</h2>
 <form action=\"#\">
 <input type=\"hidden\" name=\"op\" value=\"process-gloss\">
-<label>WordNet sense key: <input name=\"wn-sense-key\"></label>
+<label>WordNet sense key: <input name=\"wn-sense-key\" required></label>
 <input type=\"submit\" value=\"Process!\">
 </form>
 ~a
