@@ -69,17 +69,27 @@
       (declare (ignore _))
     (format nil "<a id=\"result\" href=\"lex-ont?side=ont&q=~(~a~)\" target=\"ontology\">~s</a><script type=\"text/javascript\">document.body.onload=function() { document.getElementById('result').click(); }</script>" (symbol-name ont-type) ont-type)))
 
+(defun def-rejected-p (reply-msg)
+  "Does the reply message indicate that the definition was rejected?"
+  (dfc::match-msg-pattern '(reply &key :content (answer (rejected-definition . *))) reply-msg))
+
 (defun handle-process-new-definition (msg pos word supertype def)
   (cond
-    ((or (null pos) (null word) (null def)
-         (string= "" pos) (string= "" word) (string= "" def))
+    ;; all params missing or empty
+    ((and (or (null pos) (string= "" pos))
+          (or (null word) (string= "" word))
+          (or (null supertype) (string= "" supertype))
+	  (or (null def) (string= "" def)))
+      ;; just show the initial form
       (process-new-definition-form msg))
-    ((not (member pos '("N" "V" "ADJ" "ADV") :test #'string=))
+    ;; some params specified, but some params still missing, empty, or invalid
+    ((or (null pos) (not (member pos '("N" "V" "ADJ" "ADV") :test #'string=)))
       (process-new-definition-form msg 400 "pos must be one of N, V, ADJ, or ADV"))
-    ((not (every #'alpha-char-p word))
-      (process-new-definition-form msg 400 "word must contain only alphabetic characters"))
+    ((or (null word) (string= "" word) (not (every #'alpha-char-p word)))
+      (process-new-definition-form msg 400 "word is required, and must contain only alphabetic characters"))
     ((not (every (lambda (c) (or (alpha-char-p c) (digit-char-p c) (member c '(#\- #\_) :test #'char=))) supertype))
       (process-new-definition-form msg 400 "supertype must contain only alphanumeric characters, dashes, or underscores"))
+    ;; params valid, send the message
     (t
       (send-msg-with-continuation
 	`(request :content (process-new-definition
@@ -92,9 +102,13 @@
 	    :definition ,def
 	    ))
 	(lambda (reply-msg)
-	  (if (eq 'sorry (car reply-msg))
-	    (process-new-definition-form msg 500 (escape-for-xml nil (find-arg-in-act reply-msg :comment)))
-	    (process-new-definition-form msg 200 (format nil "processed new definition of ~a<br>~a" word (show-type-from-reply reply-msg)))
+	  (cond
+	    ((eq 'sorry (car reply-msg))
+	      (process-new-definition-form msg 500 (escape-for-xml nil (find-arg-in-act reply-msg :comment))))
+	    ((def-rejected-p reply-msg)
+	      (process-new-definition-form msg 500 (format nil "definition of ~a rejected" word)))
+	    (t
+	      (process-new-definition-form msg 200 (format nil "processed new definition of ~a<br>~a" word (show-type-from-reply reply-msg))))
 	    ))
 	:content-only nil
 	))
@@ -109,10 +123,14 @@
       (send-msg-with-continuation
 	`(request :content (process-gloss :sense ,wn-sense-key))
 	(lambda (reply-msg)
-	  (if (eq 'sorry (car reply-msg))
-	    (process-gloss-form msg 500 (escape-for-xml nil (find-arg-in-act reply-msg :comment)))
-	    (process-gloss-form msg 200 (format nil "processed gloss of ~a<br>~a" wn-sense-key (show-type-from-reply reply-msg)))
-	    ))
+	  (cond
+	    ((eq 'sorry (car reply-msg))
+	      (process-gloss-form msg 500 (escape-for-xml nil (find-arg-in-act reply-msg :comment))))
+	    ((def-rejected-p reply-msg)
+	      (process-new-definition-form msg 500 (format nil "gloss of ~a rejected" wn-sense-key)))
+	    (t
+	      (process-gloss-form msg 200 (format nil "processed gloss of ~a<br>~a" wn-sense-key (show-type-from-reply reply-msg)))
+	    )))
 	:content-only nil
 	)
       ))
