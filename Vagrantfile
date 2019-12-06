@@ -123,7 +123,7 @@ ENVSH
     . /trips/env.sh
     # common stuff
     # deps that are debian packages
-    apt-get update
+    apt-get --allow-releaseinfo-change update
     # stretch: gcc-6 openjdk-8-jdk; buster: gcc-8 openjdk-11-jdk
     apt-get install -y \
       git \
@@ -153,8 +153,8 @@ ENVSH
     # WordNet (debian does have this but it messes up the directory structure and doesn't have glosstag)
     mkdir wordnet
     cd wordnet
-    curl -sS -O "http://wordnetcode.princeton.edu/3.0/WordNet-3.0.tar.bz2"
-    curl -sS -O "http://wordnetcode.princeton.edu/glosstag-files/WordNet-3.0-glosstag.tar.bz2"
+    curl -sS -O "https://wordnetcode.princeton.edu/3.0/WordNet-3.0.tar.bz2"
+    curl -sS -O "https://wordnetcode.princeton.edu/glosstag-files/WordNet-3.0-glosstag.tar.bz2"
     tar -jxf WordNet-3.0.tar.bz2
     tar -jxf WordNet-3.0-glosstag.tar.bz2
     cd ..
@@ -205,6 +205,7 @@ ENVSH
 	# avoid JavaFX on java 11/buster (don't need it for web stuff)
 	mv $TRIPS_BASE/src/util/cwc/Makefile-java $TRIPS_BASE/src/util/cwc/Makefile-java.disabled
 	mv $TRIPS_BASE/src/PDFExtractor $TRIPS_BASE/src/PDFExtractor.disabled
+	mv $TRIPS_BASE/src/DocumentRepo $TRIPS_BASE/src/DocumentRepo.disabled
 	;;
       *) echo "unknown system, no system-specific deps installed (you're on your own)" ;;
     esac
