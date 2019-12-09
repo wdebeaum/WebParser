@@ -192,7 +192,7 @@
 		   (
 		     ,@(when (eq :step trips::*trips-system*)
 		       `((parser::*semantic-skeleton-scoring-enabled*
-			    ,(cond
+			    nil #|,(cond
 			      ;; when just loading the initial page, use the
 			      ;; default setting
 			      ((null input)
@@ -201,7 +201,7 @@
 			      ;; otherwise, obey the checkbox
 			      (semantic-skeleton-scoring t)
 			      (t nil)
-			      ))))
+			      )|# )))
 		     ,@(when (and number-parses-desired
 		     		  (< 0 (length number-parses-desired))
 				  (every #'digit-char-p number-parses-desired))
