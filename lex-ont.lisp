@@ -326,9 +326,11 @@
     w))
 
 (defun make-word-from-symbol (sym?)
-  (loop with str =
-          ;; lc; s/-/ /g;
-          (substitute #\Space #\- (string-downcase (symbol-name sym?)))
+  (loop with sym-name = (symbol-name sym?)
+	with str =
+          ;; lc; s/-/ /g; (except final - for prefixes)
+          (substitute #\Space #\- (string-downcase sym-name)
+		      :end (1- (length sym-name)))
 	;; s/ punc minus /-/g;
         for start = (search " punc minus " str)
 	  then (search " punc minus " str :start2 (1+ start))
@@ -398,6 +400,9 @@
   (w::adv "adv")
   ) "inverse of wf::convert-wordnet-pos-to-trips")
 
+(defun ensure-list (x)
+  (if (consp x) x (list x)))
+
 (defun make-word-def-from-list (w def-list)
   "Make a word-def struct from one of the lists returned by get-word-def for a
    definition of a single sense. w is the word structure derived from the
@@ -406,7 +411,11 @@
       (fourth def-list)
       (declare (ignore pct))
     (destructuring-bind (colon-star &optional (ont-type colon-star) (lemma-sym ont-type))
-        (second (assoc 'w::lf feats))
+        (ensure-list (second (assoc 'w::lf feats)))
+      ;; HACK for e.g. "twenty ninth" (W::LF (W::NTH 29))
+      (when (and (eq 'w::nth colon-star) (integerp ont-type))
+        (setf ont-type (intern (format nil "NTH-~s" ont-type) :ont)
+	      lemma-sym ont-type))
       (let* ((l (make-word-from-symbol lemma-sym))
 	     (d (make-word-def :word w :lemma l :pos pos :ont-type ont-type
 			       :template (second (assoc 'w::template feats))
