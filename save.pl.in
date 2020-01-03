@@ -44,7 +44,7 @@ eval {
   my $timestamp = strftime("%Y%m%dT%H%M%S", localtime());
   my $filename = "$timestamp-$system-$user-$correct_hyp-$input.xml";
   my $www_dir = 'WWW_DIR';
-  open R, ">$www_dir/saved/$filename" or die "failed to open file: $@";
+  open R, ">$www_dir/saved/$filename" or die "failed to open file: $!";
   print R $results;
   close R;
   print "<!DOCTYPE html>\n<html><head><title>Saved</title></head><body><p>Saved $system parsing results, with $user" . "'s judgement that the correct hypothesis was: $correct_hyp. Results may be reviewed here: <a href=\"../saved/$filename\">$filename</a>. That page won't let you parse anything new; use the back button to get back to the real parser web interface.</p></body></html>";
