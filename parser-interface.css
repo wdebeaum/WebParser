@@ -7,7 +7,7 @@ input[type='number'] {
   margin-right: 2em;
 }
 
-.incorrect input {
+.incorrect input, .error {
   background-color: #ff7f7f;
 }
 

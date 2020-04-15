@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="cvsId" content="$Id: api.html,v 1.33 2019/10/21 15:04:52 wdebeaum Exp $">
+<meta name="cvsId" content="$Id: api.html,v 1.34 2020/03/26 21:21:42 wdebeaum Exp $">
 <meta charset="UTF-8">
 <title>TRIPS Parser Web API Documentation</title>
 <style type="text/css">
@@ -291,6 +291,10 @@ This never actually gets out of TextTagger, since the tag only has domain-specif
 <tr><td><code>name</code></td><td>The name of the subregion.</td></tr>
 <tr><td><code>countries</code></td><td>The (ISO-3166-1 alpha-2) codes for the countries contained in this subregion.</td></tr>
 <tr><td><code>&lt;match ... /&gt;</code></td><td>See the same element under <code>&lt;term&gt;</code> above.</td></tr>
+
+<tr class="first"><th rowspan="3"><code>&lt;units&gt;</code></th><td class="spacer"></td><td>Units of measure expression.</td></tr>
+<tr><td><code>units</code></td><td>Normalized units expression involving <code>*</code> for multiplication and <code>^</code> for (possibly negated) exponents, with units spelled out and sorted alphabetically. E.g. "km/s^2" becomes <code>"kilometer*second^-2"</code>.</td></tr>
+<tr><td><code>dimensions</code></td><td>Similarly-normalized dimensions expression, e.g. <code>"length*time^-2"</code>. Dimensions are also sorted alphabetically; they don't necessarily align with the units. Dimensionless units have dimension <code>1</code>, while units of unknown dimension have dimension <code>unknown</code>.</td></tr>
 
 <!-- TODO umls, but we never get that in the web system -->
 </table>

@@ -186,6 +186,18 @@ function downcaseHack() {
   }
 }
 
+function linkifyError() {
+  var errors = document.getElementsByClassName('error');
+  for (var i = 0; i < errors.length; i++) {
+    errors[i].innerHTML =
+      errors[i].innerHTML.
+      replace(/\[[^\]]+\]/g, function(m) {
+	var l = m.substring(1, m.length - 1);
+	return "<a href=\"" + l + "\">" + l + "</a>";
+      });
+  }
+}
+
 function dotToSVG(dotPRE) {
   var dotText = dotPRE.textContent;
   var params = "dot=" + encodeURIComponent(dotText);
@@ -244,6 +256,7 @@ function bodyLoaded() {
   initVars();
   initHypDisplay();
   downcaseHack();
+  linkifyError();
   setAllDisplay();
   dotsToSVG();
   document.onchange = handleCheckboxChange;

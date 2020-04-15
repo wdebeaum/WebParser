@@ -117,6 +117,9 @@
     :name string
     :countries (list-of symbol)
     :matches matches)
+  (units
+    :units string
+    :dimensions string)
   )
   "An assoc list from domain-specific-info types to keyword-argument lists
    mapping their arguments to the arguments' types. This also provides the

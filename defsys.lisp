@@ -49,6 +49,7 @@
 (defvar *allow-lex-ont-editing* (trips:get-env "ALLOW_LEX_ONT_EDITING") "Allow users of the lex-ont browser to dynamically edit the lexicon and ontology. Such edits will affect everyone using this running instance of the system, so you should probably only turn this on if you know you're the only one using this instance.")
 (defvar *lex-edits* nil)
 (defvar *ont-edits* nil)
+(defvar *max-words-for-utterance* 50 "Maximum number of words an utterance parser will accept in a single input text unit.")
 
 (defun run ()
   (dfc:run-component :webparser))

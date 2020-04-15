@@ -164,7 +164,7 @@
   (eval (read-from-string "(setf im::*CPS-control* nil)"))
 
   ;; send the utterance itself off to be processed
-  (send-msg `(tell :content (utterance :text ,(utterance-text utt) :uttnum ,(utterance-num utt) :direction input)))
+  (send-msg `(tell :content (utterance :text ,(utterance-text utt) :uttnum ,(utterance-num utt) :direction input :channel desktop)))
   ;; set TT options back to the default if we changed them
   (when (utterance-texttagger-options utt)
     (set-texttagger-options *original-tt-parameters*))
@@ -450,6 +450,21 @@
     ((>= (length (text-unit-text text)) (parser::getmaxchartsize))
       ; too much input
       (reply-without-parsing text (format nil "input too long (must be fewer than ~s characters)" (parser::getmaxchartsize))))
+    ((and (utterance-p text)
+	  (> (length (util:split-string (utterance-text text)
+			 :on '(#\Space #\Tab #\Newline #\Return)))
+	     *max-words-for-utterance*))
+      ; too much input for a single utterance
+      (reply-without-parsing text
+	  (format nil "Input looks too long to be a single sentence (must be ~s words or fewer). Try a paragraph parser like [~a], or split sentences yourself and submit them one at a time."
+		  *max-words-for-utterance*
+		  ;; pick a paragraph parser to suggest based on current service
+		  (case (utterance-service text)
+		    (:bob "drum-dev")
+		    (:cwms "cwmsreader")
+		    (otherwise "step")
+		    )
+		  )))
     (t ; have good input: queue it, and start working on it unless we're busy
       (let ((busy (not (null *pending-text-units*))))
 	(setf *pending-text-units* (nconc *pending-text-units* (list text)))
