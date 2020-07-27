@@ -418,7 +418,7 @@
 	      lemma-sym ont-type))
       (let* ((l (make-word-from-symbol lemma-sym))
 	     (d (make-word-def :word w :lemma l :pos pos :ont-type ont-type
-			       :template (cdr (assoc 'w::template feats))
+			       :template (second (assoc 'w::template feats))
 			       :nom-of
 				 (let ((n (assoc 'w::nom-of feats)))
 				   (when n
