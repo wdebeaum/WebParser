@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="cvsId" content="$Id: api.html,v 1.35 2020/04/21 17:55:58 wdebeaum Exp $">
+<meta name="cvsId" content="$Id: api.html,v 1.36 2020/08/10 20:28:26 wdebeaum Exp $">
 <meta charset="UTF-8">
 <title>TRIPS Parser Web API Documentation</title>
 <style type="text/css">
@@ -195,7 +195,7 @@ tr.first th {
 <tr><td><code>id</code></td><td>Identifier for a concept from one of the ontologies.</td></tr>
 <tr><td><code>name</code></td><td>More or less human-readable name for the concept.</td></tr>
 <tr><td><code>score</code></td><td>The maximum of the <code>score</code>s from the <code>match</code>es (see below).</td></tr>
-<tr><td><code>&lt;match score="..." input="..." matched="..." status="..." ... /&gt;</code></td><td>Describes the way the input string matched the string from the ontology (which may differ in case and hyphenation). There may be more than one of these. The <code>score</code> is a number between 0 and 1, 1 being the best (but not a probability). <code>input</code> is the part of the input string, and <code>matched</code> is the string from the ontology that matched. <code>status</code> is the status of that string in relation to the <code>id</code>, as encoded in that ontology. Other attributes are mostly word counts for ways corresponding words in the <code>input</code> and <code>matched</code> strings match. These are used in computing the <code>score</code>.</td></tr>
+<tr><td><code>&lt;match score="..." input="..." matched="..." [via="..."] status="..." ... /&gt;</code></td><td>Describes the way the input string matched the string from the ontology (which may differ in case and hyphenation). There may be more than one of these. The <code>score</code> is a number between 0 and 1, 1 being the best (but not a probability). <code>input</code> is the part of the input string, and <code>matched</code> is the string from the ontology that matched. <code>status</code> is the status of that string in relation to the <code>id</code>, as encoded in that ontology. Other attributes are mostly word counts for ways corresponding words in the <code>input</code> and <code>matched</code> strings match. These are used in computing the <code>score</code>. For terms where spelling correction or depluralization was used, <code>via</code> is the spelling of the term after such transformations, which only differs from <code>matched</code> in case and hyphenation.</td></tr>
 <tr><td><code>species</code></td><td>Species this protein is from, "Homo sapiens (Human)" or "Mus musculus (Mouse)" (more may be added in the future).</td></tr>
 <tr><td><code>dbxrefs</code></td><td>Comma-separated list of IDs of related concepts in other ontologies ("database cross-references").</td></tr>
 <tr><td><code>&lt;map to="<var>...</var>" through="<var>...</var>" /&gt;</code></td><td>Ontology mapping our system used to arrive at one of the <code>ont-types</code>, <code>to</code>, through another concept in the same ontology, <code>through</code>, which in some sense subsumes the tagged concept in that ontology.</td></tr>
