@@ -28,7 +28,7 @@ William de Beaumont
 <xsl:template name="id">
  <xsl:param name="id" />
  <xsl:text>ONT::</xsl:text>
- <b class="term{count(//rdf:Description[@rdf:ID=$id]/preceding-sibling::rdf:Description)}">
+ <b class="term{count(./ancestor::rdf:RDF//rdf:Description[@rdf:ID=$id]/preceding-sibling::rdf:Description)}">
  <xsl:value-of select="$id" />
  </b>
 </xsl:template>
