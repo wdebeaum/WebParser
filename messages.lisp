@@ -110,6 +110,8 @@
 	   (make-paragraph-p (or (member trips::*trips-system* '(:drum :step))
 				 (string= uri-basename "cwmsreader")))
 	   (do-inference (member uri-basename '("drum-er" "cwmsreader") :test #'string=)))
+      (when (string= uri-basename "domiknows")
+	(return-from handle-http-request nil)) ; let Domiknows component do it
       (when (string= uri-basename "lex-ont")
         (return-from handle-http-request (handle-lex-ont msg query)))
       (when (string= uri-basename "lex-ont-edit")
