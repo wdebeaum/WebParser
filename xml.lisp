@@ -28,6 +28,34 @@
         (format out-stream "~a" str))
       )))
 
+(defun unescape-xml (out-stream str)
+  "Inverse of escape-for-xml."
+  (unless out-stream
+    (return-from unescape-xml
+      (with-output-to-string (s) (unescape-for-xml s str))))
+  (let ((amp-pos (position #\& str)))
+    (cond
+      (amp-pos
+	(let* ((semi-pos (or (position #\; str :start amp-pos)
+			     (error "expected ; after & in XML at position ~s"
+				    amp-pos)))
+	       (before (subseq str 0 amp-pos))
+	       (esc-name (intern (string-upcase (subseq str (1+ amp-pos) semi-pos)) :keyword))
+	       (after (subseq str (1+ semi-pos))))
+	  (format out-stream "~a~c"
+	      before
+	      (ecase esc-name
+		(:lt   #\<)
+		(:quot #\")
+		(:gt   #\>)
+		(:amp  #\&)
+		))
+	  (unescape-xml out-stream after)
+	  ))
+      (t
+	(format out-stream "~a" str))
+      )))
+
 (defun format-xml-start (out-stream sexp)
   "Like format-xml, but only take one sexp, and only output the start tag.
    Return two values: the list of children from sexp, and the tag name string."

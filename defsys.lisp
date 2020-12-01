@@ -50,6 +50,7 @@
 (defvar *lex-edits* nil)
 (defvar *ont-edits* nil)
 (defvar *max-words-for-utterance* 50 "Maximum number of words an utterance parser will accept in a single input text unit.")
+(defvar *default-output-parts* '(:debug :exts-xml :words-lisp :words-xml :tags-lisp :tags-xml :tree-lisp :tree-xml :lf-lisp :lf-rdf) "default value for the output-parts parameter")
 
 (defun run ()
   (dfc:run-component :webparser))

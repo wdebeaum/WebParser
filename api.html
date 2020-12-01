@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="cvsId" content="$Id: api.html,v 1.36 2020/08/10 20:28:26 wdebeaum Exp $">
+<meta name="cvsId" content="$Id: api.html,v 1.37 2020/12/01 22:04:47 wdebeaum Exp $">
 <meta charset="UTF-8">
 <title>TRIPS Parser Web API Documentation</title>
 <style type="text/css">
@@ -16,11 +16,20 @@ th, td {
   text-align: left;
 }
 
+table.center-cells tr td {
+  text-align: center;
+}
+
 tr.first th, tr.first td {
   border-top: 0.75ex solid black;
 }
 
 td.spacer {
+  border-left: none;
+}
+
+td.top-left {
+  border-top: none;
   border-left: none;
 }
 
@@ -83,6 +92,18 @@ tr.first th {
 <dd>Select which component to focus on. The default is <code>parser</code>, but you can also use <code>texttagger</code>, which will only run the TextTagger component and not the Parser or the extractor, and will return a <code>&lt;texttagger-output&gt;</code> XML document instead of <code>&lt;trips-parser-output&gt;</code> (see TextTagger Output Format below).
 <dt><code>extsformat</code>, <code>tagsformat</code>, <code>treecontents</code>, <code>treeformat</code>, <code>lfformat</code>
 <dd>These parameters are just echoed back as attributes on the top element of the response XML. They're used by the web browser interface to preserve display options across requests.
+<dt><code>output-parts</code>
+<dd>Select which parts of the output to include in the raw XML, including parts that would normally be computed by the browser. This option is intended for use by non-browser users; using it in the browser will likely produce a page that doesn't display correctly. The format of this option is a space-separated list of parts, each of which names a section and a format for that section, separated by a hyphen (except for the <code>debug</code> section, which has only one possible format). The sections are <code>debug</code>, <code>exts</code>, <code>words</code>, <code>tags</code>, <code>lf</code>, and <code>tree</code>. The formats are <code>lisp</code>, <code>xml</code>, <code>table</code>, <code>rdf</code>, <code>dot</code>, <code>svg</code>, <code>amr</code> and <code>lingo</code>. The allowed combinations of section and format are summarized in the table below:
+<table class="center-cells">
+<tr><td class="top-left"></td><th><code>lisp</code></th><th><code>xml</code></th><th><code>table</code></th><th><code>rdf</code></th><th><code>dot</code></th><th><code>svg</code></th><th><code>amr</code></th><th><code>lingo</code></th></tr>
+<tr><th><code>debug</code></th><td colspan="8">N/A</td></tr>
+<tr><th><code>exts</code></th><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+<tr><th><code>words</code></th><td>✓</td><td>✓</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+<tr><th><code>tags</code></th><td>✓</td><td>✓</td><td>✓</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+<tr><th><code>lf</code></th><td>✓</td><td>&nbsp;</td><td>&nbsp;</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>&nbsp;</td></tr>
+<tr><th><code>tree</code></th><td>✓</td><td>✓</td><td>&nbsp;</td><td>&nbsp;</td><td>✓</td><td>✓</td><td>&nbsp;</td><td>✓</td></tr>
+</table>
+The default is <code>output-parts=debug exts-xml words-lisp words-xml tags-lisp tags-xml lf-lisp lf-rdf tree-lisp tree-xml</code>. Note that the overall structure of the output will be the same, with the selected parts either replacing or becoming siblings of the default parts in the same section. Also note that some systems may produce two versions of the extractions (<code>exts</code>): the raw and inferred extractions. These are not marked in the raw output, but they will always appear in that order.
 </dl>
 
 <h2>Parser Output Format</h2>

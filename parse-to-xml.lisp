@@ -131,15 +131,80 @@
     (t (cons (car term) (flatten-tma (cdr term))))
     ))
 
-(defun wrapped-tags-to-xml-stream (tt-output s)
+(defun write-through-xsltproc (mode xml-string output-stream)
+  "Write the given xml-string through the command:
+     xsltproc --novalid --stringparam mode $mode parser-interface-no-decl.xsl -
+   "
+  (with-input-from-string (xml-stream xml-string)
+    (#+cmu ext:run-program
+     #+sbcl sb-ext:run-program
+     #+ccl ccl:run-program
+       "/usr/bin/env" ; take $PATH into account
+       `("xsltproc"
+	 "--novalid" ; don't require dtd
+	 "--stringparam" "mode" ,mode
+	 ,(namestring #!TRIPS"www;style;parser-interface-no-decl.xsl")
+	 "-" ; read XML input from stdin
+	 )
+       :input xml-stream
+       :output output-stream)))
+
+(defun wrapped-tags-to-xml-stream (tt-output output-parts s)
   (when tt-output
     (format-xml-start s '(tags ""))
-    (format-xml s `(lisp ,(format nil "~s" tt-output)))
-    (tags-to-xml-stream tt-output s)
+    (when (member :tags-lisp output-parts)
+      (format-xml s `(lisp ,(format nil "~s" tt-output))))
+    (when (intersection output-parts '(:tags-xml :tags-table)) ;table dep on xml
+      (let ((tags-xml
+	      (with-output-to-string (txs)
+		(tags-to-xml-stream tt-output txs))))
+	(when (member :tags-xml output-parts)
+	  (write-string tags-xml s))
+	(when (member :tags-table output-parts)
+	  (write-through-xsltproc "tags-to-table"
+	      ;; must wrap tags so there is exactly one top level element
+	      (format nil "<tags>~a</tags>" tags-xml)
+	      s))
+	))
     (format-xml-end s "tags")
     ))
 
-(defun utt-to-xml-stream (utt tree tt-output s)
+(defun remove-tags-from-dot (dot)
+  "Remove HTML <pre> tags from around a dot graph string output from xsl."
+  (let ((dot-start (search "digraph" dot))
+	(dot-end (search "}" dot)))
+    (unless (and dot-start dot-end)
+      (error "bogus dot graph: ~s" dot))
+    (subseq dot dot-start (+ 2 dot-end))))
+
+(defun dot-to-svg (dot-string)
+  "Convert a dot graph string to an SVG string, using the external
+   dot-to-svg.pl program."
+  (let ((request-string
+	  (with-output-to-string (rs)
+	    (write-string "dot=" rs)
+	    (unescape-xml rs dot-string) ; TODO actually URL-encode dot-string? doesn't seem to matter, there won't be any & or % in it
+	    )))
+    (with-input-from-string (dot-stream request-string)
+      (let* ((response-string (with-output-to-string (svg-stream)
+	       (#+cmu ext:run-program
+		#+sbcl sb-ext:run-program
+		#+ccl ccl:run-program
+		  (format nil "~a" #!TRIPS"www;cgi;dot-to-svg.pl")
+		  nil ; no command line arguments
+		  :env `((:REQUEST_METHOD . "POST")
+			 (:CONTENT_LENGTH .
+			   ,(format nil "~a" (length request-string)))
+			 (:CONTENT_TYPE .
+			   "application/x-www-form-urlencoded"))
+		  :input dot-stream
+		  :output svg-stream)))
+	     (svg-start (search "<svg" response-string)))
+	(unless svg-start
+	  (error "bogus dot-to-svg response: ~s" response-string))
+	(subseq response-string svg-start)))))
+
+(defun utt-to-xml-stream (utt tree tt-output output-parts s)
   (let* ((terms (mapcar
                   (lambda (term)
 		    (let ((flat-lf (flatten-tma (find-arg-in-act term :lf))))
@@ -156,28 +221,67 @@
 	 )
     (format-xml-start s '(utt ""))
 
-    (format-xml s
-      `(words
-        (lisp ,(format nil "~s" words))
-	,@(mapcar
-	    (lambda (w)
-	      `(word ,(format nil "~a" w)))
-	    words)
-        ))
+    (when (member :words-lisp output-parts)
+      (format-xml s
+	`(words
+	  (lisp ,(format nil "~s" words))
+	  ,@(mapcar
+	      (lambda (w)
+		`(word ,(format nil "~a" w)))
+	      words)
+	  )))
 
-    (wrapped-tags-to-xml-stream tt-output s)
+    (wrapped-tags-to-xml-stream tt-output output-parts s)
     
     (unless tree
       (setf tree (simplify-tree (subst-package
 		     (first (find-arg-in-act utt :tree)) :w))))
     (format-xml-start s '(tree ""))
-    (format-xml s `(lisp ,(format nil "~s" tree)))
-    (tree-to-xml-stream tree s)
+    (when (member :tree-lisp output-parts)
+      (format-xml s `(lisp ,(format nil "~s" tree))))
+    (when (intersection output-parts
+			;; all of these depend on tree-xml
+			'(:tree-xml :tree-lingo :tree-dot :tree-svg))
+      (let ((tree-xml (with-output-to-string (txs)
+			(tree-to-xml-stream tree txs))))
+	(when (member :tree-xml output-parts)
+	  (write-string tree-xml s))
+	(when (member :tree-lingo output-parts)
+	  (write-through-xsltproc "tree-to-LinGO" tree-xml s))
+	(when (intersection output-parts '(:tree-dot :tree-svg)) ;svg dep on dot
+	  (let ((tree-dot
+		  (with-output-to-string (tds)
+		    (write-through-xsltproc "tree-to-dot" tree-xml tds))))
+	    (when (member :tree-dot output-parts)
+	      (write-string tree-dot s))
+	    (when (member :tree-svg output-parts)
+	      (write-string (dot-to-svg (remove-tags-from-dot tree-dot)) s))
+	    ))
+	))
     (format-xml-end s "tree")
     
     (format-xml-start s `(terms :root ,(format nil "#~a" (symbol-name root)) ""))
-    (format-xml s `(lisp ,(format nil "~s" terms)))
-    (lf-to-rdf-stream terms s)
+    (when (member :lf-lisp output-parts)
+      (format-xml s `(lisp ,(format nil "~s" terms))))
+    (when (intersection output-parts
+			;; all of these depend on lf-rdf
+			'(:lf-rdf :lf-amr :lf-dot :lf-svg))
+      (let ((lf-rdf (with-output-to-string (trs)
+			 (lf-to-rdf-stream terms trs))))
+	(when (member :lf-rdf output-parts)
+	  (write-string lf-rdf s))
+	(when (member :lf-amr output-parts)
+	  (write-through-xsltproc "lf-to-amr" lf-rdf s))
+	(when (intersection output-parts '(:lf-dot :lf-svg))
+	  (let ((lf-dot
+		  (with-output-to-string (tds)
+		    (write-through-xsltproc "lf-to-dot" lf-rdf tds))))
+	    (when (member :lf-dot output-parts)
+	      (write-string lf-dot s))
+	    (when (member :lf-svg output-parts)
+	      (write-string (dot-to-svg (remove-tags-from-dot lf-dot)) s))
+	    ))
+	))
     (format-xml-end s "terms")
     
     ;; NOTE: caller must do this (after adding its own children if any)
@@ -208,16 +312,16 @@
       (fix-start-end-rec speech-act
           (apply #'min tt-offsets) (apply #'max tt-offsets)))))
 
-(defun alt-hyps-to-xml-stream (alt-lfs s)
+(defun alt-hyps-to-xml-stream (alt-lfs output-parts s)
   (when alt-lfs
     (format s "<alt-hyps>~%")
     (dolist (alt-lf alt-lfs)
       ;; NOTE: we don't pass tt-output because it will be redundant
-      (parse-to-xml-stream-rec alt-lf nil nil s))
+      (parse-to-xml-stream-rec alt-lf nil nil output-parts s))
     (format s "</alt-hyps>~%")
     ))
 
-(defun parse-to-xml-stream-rec (lf alt-lfs tt-output s)
+(defun parse-to-xml-stream-rec (lf alt-lfs tt-output output-parts s)
   (cond
     ((eq (car lf) 'compound-communication-act)
       (format s "<compound-communication-act>~%")
@@ -228,15 +332,15 @@
 	      (or (simplify-tree (subst-package (find-arg-in-act lf :tree) :w))
 		  (make-list (length utts)))
 	    for msgs in tt-outputs-by-utt
-	    do (utt-to-xml-stream utt tree msgs s)
+	    do (utt-to-xml-stream utt tree msgs output-parts s)
 	       (format-xml-end s "utt")
 	    )
-      (alt-hyps-to-xml-stream alt-lfs s)
+      (alt-hyps-to-xml-stream alt-lfs output-parts s)
       (format s "</compound-communication-act>~%")
       )
     ((eq (car lf) 'utt)
-      (utt-to-xml-stream lf nil tt-output s)
-      (alt-hyps-to-xml-stream alt-lfs s)
+      (utt-to-xml-stream lf nil tt-output output-parts s)
+      (alt-hyps-to-xml-stream alt-lfs output-parts s)
       (format-xml-end s "utt")
       )
     ((eq (car lf) 'failed-to-parse)
@@ -253,9 +357,9 @@
 	    for alt-sas = (mapcar (lambda (hyp) (nth i hyp)) alt-lfs)
             for tto in tt-output
             do (fix-start-end sa tto)
-	       (parse-to-xml-stream-rec sa alt-sas tto s)))
+	       (parse-to-xml-stream-rec sa alt-sas tto output-parts s)))
 ;    ((and (= 1 (length lf)) (listp (car lf)))
-;      (parse-to-xml-stream-rec (car lf) nil tt-output s)
+;      (parse-to-xml-stream-rec (car lf) nil tt-output output-parts s)
 ;      )
     (t
       (format s "<bogus-lf>~%~S~%</bogus-lf>~%" lf)
@@ -342,14 +446,40 @@
     (format s "~%")
     ))
 
-(defun parse-to-xml-stream (options input debug-output extractions lf alt-lfs tt-output s)
+(defun parse-to-xml-stream (options input debug-output extractions lf alt-lfs tt-output output-parts s)
   (print-xml-header options input s)
-  (format-xml s `(debug ,debug-output))
-  (when (stringp extractions)
-    (write-string extractions s))
+
+  (when (member :debug output-parts)
+    (format-xml s `(debug ,debug-output)))
+
+  (dolist (ekb extractions)
+    (when (member :exts-xml output-parts)
+      (write-string ekb s))
+    (when (member :exts-lisp output-parts)
+      (write-through-xsltproc "exts-to-lisp" ekb s))
+    (when (member :exts-table output-parts)
+      (write-through-xsltproc "exts-to-table" ekb s))
+    (when (intersection output-parts '(:exts-rdf :exts-dot :exts-svg)) ; deps
+      (let ((exts-rdf
+	      (with-output-to-string (ers)
+		(write-through-xsltproc "exts-to-rdf" ekb ers))))
+	(when (member :exts-rdf output-parts)
+	  (write-string exts-rdf s))
+	(when (intersection output-parts '(:exts-dot :exts-svg)) ; deps
+	  (let ((exts-dot
+		  (with-output-to-string (eds)
+		    (write-through-xsltproc "lf-to-dot" exts-rdf eds))))
+	    (when (member :exts-dot output-parts)
+	      (write-string exts-dot s))
+	    (when (member :exts-svg output-parts)
+	      (write-string (dot-to-svg (remove-tags-from-dot exts-dot)) s))
+	    ))
+	))
+    )
+
   (ecase (find-arg options :component)
     (parser
-      (parse-to-xml-stream-rec lf alt-lfs tt-output s)
+      (parse-to-xml-stream-rec lf alt-lfs tt-output output-parts s)
       (format-xml-end s "trips-parser-output")
       )
     (texttagger
@@ -359,13 +489,13 @@
 	  (dolist (utterance (split-tt-output-into-utterances tt-output))
 	    (format-xml-start s
 	      `(utterance :text ,(find-arg-in-act (car utterance) :text) ""))
-	    (wrapped-tags-to-xml-stream (cdr utterance) s)
+	    (wrapped-tags-to-xml-stream (cdr utterance) output-parts s)
 	    (format-xml-end s "utterance")
 	    ))
 	;; single utterance
 	(t
 	  (format-xml-start s `(utterance :text ,input ""))
-	  (wrapped-tags-to-xml-stream tt-output s)
+	  (wrapped-tags-to-xml-stream tt-output output-parts s)
 	  (format-xml-end s "utterance")
 	  )
 	)
@@ -416,7 +546,7 @@
 	           (lf (subst-package (parser::parse '(parser::end-sentence)) :parser)))
 	        (declare (ignore ig1 ig2))
 	      (values (get-output-stream-string *standard-output*) lf))
-	  (parse-to-xml-stream options input debug-output nil lf nil nil s)))
+	  (parse-to-xml-stream options input debug-output nil lf nil nil *default-output-parts* s)))
       (t
         (when parser::*semantic-skeleton-scoring-enabled*
 	  (setf options (append options '(:semantic-skeleton-scoring "on"))))

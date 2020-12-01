@@ -14,7 +14,7 @@ STYLE_DIR = $(WWW_DIR)/style
 ETC_STYLE_DIR = $(etcdir)/style
 
 CGI_FILES = dot-htaccess cgi-kqml-bridge.pl ../KQML/KQML.pm dot-to-svg.pl save.pl saved.pl
-STYLE_FILES = word-def.xsl word.xsl onttype.xsl onttype.js drum-interface.xsl parser-interface.xsl parser-interface.js parser-interface.css tree-to-lisp.xsl tree-to-LinGO.xsl tree-to-dot.xsl lf-to-html.xsl lf-to-amr.xsl lf-to-dot.xsl tags-to-table.xsl exts-to-table.xsl exts-to-rdf.xsl ekb-to-dot.xsl exslt/str.replace.template.xsl exslt/str.tokenize.template.xsl
+STYLE_FILES = word-def.xsl word.xsl onttype.xsl onttype.js drum-interface.xsl parser-interface.xsl parser-interface-no-decl.xsl parser-interface.js parser-interface.css tree-to-lisp.xsl tree-to-LinGO.xsl tree-to-dot.xsl lf-to-html.xsl lf-to-amr.xsl lf-to-dot.xsl tags-to-table.xsl exts-to-table.xsl exts-to-rdf.xsl ekb-to-dot.xsl exslt/str.replace.template.xsl exslt/str.tokenize.template.xsl
 OTHER_WWW_FILES = trips-parser-output.dtd ../Parser/docs/LF\ Documentation.pdf api.html onttype.dtd word.dtd
 
 install:: $(CGI_FILES) $(STYLE_FILES) $(OTHER_WWW_FILES) jquery/MADE

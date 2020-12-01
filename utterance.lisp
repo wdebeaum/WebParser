@@ -5,6 +5,7 @@
   text ; input text
   service ; name of the web service (e.g. :DRUM, :DRUM-ER, :CWMSREADER...)
   component ; parser or texttagger
+  output-parts ; list of parts of the output to include in XML
   interface-options ; extscontents, extsformat, tagsformat, treecontents, treeformat, lfformat, debug
   texttagger-options ; see ../TextTagger/docs/README.xhtml
   parser-options ; see ../Parser/...
@@ -251,14 +252,16 @@
 	(setf (paragraph-uttnums para) (find-arg-in-act dg-reply :uttnums))
 	(let ((ekb-file (find-arg-in-act dg-reply :ekb-file)))
 	  (setf (paragraph-extractions para)
-		(if (stringp ekb-file)
-		  (remove-processing-instructions (slurp-file ekb-file))
-		  "")))
+		(when (stringp ekb-file)
+		  (list (remove-processing-instructions (slurp-file ekb-file)))
+		  )))
 	(let ((inf-ekb-file (find-arg-in-act dg-reply :inferred-ekb-file)))
 	  (when (stringp inf-ekb-file)
 	    (setf (paragraph-extractions para)
-		  (concatenate 'string (paragraph-extractions para)
-		      (remove-processing-instructions (slurp-file inf-ekb-file))
+		  (nconc
+		      (paragraph-extractions para)
+		      (list (remove-processing-instructions
+			        (slurp-file inf-ekb-file)))
 		      ))))
 	(setf *last-uttnum* (car (last (paragraph-uttnums para))))
 	)
@@ -374,6 +377,7 @@
 	 (rs (find-arg eo :rule-set))
 	 (tl (find-arg eo :trace-level))
 	 (io (text-unit-interface-options text))
+	 (op (text-unit-output-parts text))
 	 )
     ;; when component=texttagger; get only the relevant interface options
     (when (eq 'texttagger (text-unit-component text))
@@ -382,6 +386,7 @@
     `(
       :service ,(symbol-name (text-unit-service text))
       :component ,(text-unit-component text) ; not really an attribute, whatevs
+      :output-parts ,op
       ,@io
       ,@(when tt
 	 (list :tag-type (format nil "~(~s~)" tt)))
@@ -553,6 +558,7 @@
 	;; component=texttagger was never reversed in the first place
 	(text-unit-texttagger-output text)
 	)
+      (text-unit-output-parts text)
       s)
     (send-msg
       `(tell

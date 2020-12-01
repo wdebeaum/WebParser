@@ -141,6 +141,7 @@
 			    number-parses-desired
 			    trace-level
 			    rule-set
+			    output-parts
 			    &allow-other-keys
 			  ) query
 	(let* ((slots `(
@@ -148,6 +149,12 @@
 		 :service ,(intern (string-upcase uri-basename) :keyword)
 		 :component ,(if (string-equal "texttagger" component)
 			       'texttagger 'parser)
+		 :output-parts ,(if output-parts
+				  (mapcar
+				    (lambda (s)
+				      (intern (string-upcase s) :keyword))
+				    (util:split-string output-parts))
+				  *default-output-parts*)
 		 :interface-options (
 		   :stylesheet
 		     ,(if (eq :drum trips::*trips-system*)
@@ -165,7 +172,7 @@
 		   :treeformat ,treeformat
 		   :lfformat ,lfformat
 		   ,@(when debug '(:debug "on"))
-		 )
+		   )
 		 :texttagger-options
 		   (
 		     ,@(when (and tag-type (not (string= "" tag-type)))

@@ -18,6 +18,8 @@
  <xsl:include href="exts-to-table.xsl" />
  <xsl:include href="exts-to-rdf.xsl" />
 
+ <xsl:param name="mode" />
+
  <xsl:template match="debug">
   <div id="debug-div" style="display: none">
    <h2 title="Output written to the Lisp console.">Debug Output</h2>
@@ -32,6 +34,20 @@
   </div>
  </xsl:template>
 
+ <xsl:template match="ekb" mode="exts-to-lisp">
+  <xsl:param name="type" />
+  <pre class="exts-{$type}lisp">
+   <xsl:text>(</xsl:text>
+   <xsl:for-each select=".//@lisp">
+    <xsl:value-of select="." />
+    <xsl:text>
+ </xsl:text>
+   </xsl:for-each>
+   <xsl:text>)
+</xsl:text>
+  </pre>
+ </xsl:template>
+
  <xsl:template match="ekb">
   <xsl:variable name="type">
    <xsl:choose>
@@ -43,16 +59,9 @@
   <xsl:if test="count(preceding::ekb) = 0">
    <h2 title="Extracted terms, events, etc.">Extractions</h2>
   </xsl:if>
-  <pre class="exts-{$type}lisp">
-   <xsl:text>(</xsl:text>
-   <xsl:for-each select=".//@lisp">
-    <xsl:value-of select="." />
-    <xsl:text>
- </xsl:text>
-   </xsl:for-each>
-   <xsl:text>)
-</xsl:text>
-  </pre>
+  <xsl:apply-templates select="." mode="exts-to-lisp">
+   <xsl:with-param name="type" select="$type" />
+  </xsl:apply-templates>
   <div class="exts-{$type}table">
    <xsl:apply-templates select="." mode="exts-to-table" />
   </div>
@@ -838,6 +847,38 @@
     <xsl:call-template name="footer" />
    </body>
   </html>
+ </xsl:template>
+
+ <xsl:template match="/">
+  <xsl:choose>
+   <xsl:when test="$mode = 'tags-to-table'">
+    <xsl:apply-templates select="tags" mode="tags-to-table" />
+   </xsl:when>
+   <xsl:when test="$mode = 'tree-to-LinGO'">
+    <xsl:apply-templates select="*" mode="tree-to-LinGO" />
+   </xsl:when>
+   <xsl:when test="$mode = 'tree-to-dot'">
+    <xsl:apply-templates select="*" mode="tree-to-dot" />
+   </xsl:when>
+   <xsl:when test="$mode = 'lf-to-amr'">
+    <xsl:apply-templates select="rdf:RDF" mode="lf-to-amr" />
+   </xsl:when>
+   <xsl:when test="$mode = 'lf-to-dot'">
+    <xsl:apply-templates select="rdf:RDF" mode="lf-to-dot" />
+   </xsl:when>
+   <xsl:when test="$mode = 'exts-to-lisp'">
+    <xsl:apply-templates select="ekb" mode="exts-to-lisp" />
+   </xsl:when>
+   <xsl:when test="$mode = 'exts-to-table'">
+    <xsl:apply-templates select="ekb" mode="exts-to-table" />
+   </xsl:when>
+   <xsl:when test="$mode = 'exts-to-rdf'">
+    <xsl:apply-templates select="ekb" mode="exts-to-rdf" />
+   </xsl:when>
+   <xsl:otherwise>
+    <xsl:apply-templates select="*" />
+   </xsl:otherwise>
+  </xsl:choose>
  </xsl:template>
 
 </xsl:stylesheet>
