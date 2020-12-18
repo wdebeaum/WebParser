@@ -198,9 +198,10 @@ function linkifyError() {
   }
 }
 
-function dotToSVG(dotPRE) {
+function dotToSVG(dotPRE, simple) {
   var dotText = dotPRE.textContent;
   var params = "dot=" + encodeURIComponent(dotText);
+  if (simple) params += "&simple=on";
   var xhr = new XMLHttpRequest();
   xhr.open("POST", "../cgi/dot-to-svg.pl", true);
   xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
@@ -243,11 +244,11 @@ function dotToSVG(dotPRE) {
   xhr.send(params);
 }
 
-function dotsToSVG() {
+function dotsToSVG(simple) {
   var PREs = document.getElementsByTagNameNS(xhtmlNS, "pre");
   for (var i = 0; i < PREs.length; i++) {
     if (/\bdot\b/.test(PREs[i].className)) {
-      dotToSVG(PREs[i]);
+      dotToSVG(PREs[i], simple);
     }
   }
 }
