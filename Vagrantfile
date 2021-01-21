@@ -131,6 +131,8 @@ ENVSH
       curl \
       unzip \
       gcc-8 \
+      libicu-dev \
+      pkg-config \
       sbcl \
       openjdk-11-jdk \
       perl \
@@ -161,8 +163,8 @@ ENVSH
     # Stanford CoreNLP
     mkdir stanford-corenlp
     cd stanford-corenlp
-    curl -sS -O -L "http://nlp.stanford.edu/software/stanford-corenlp-full-2018-10-05.zip"
-    unzip stanford-corenlp-full-2018-10-05.zip
+    curl -sS -O -L "http://nlp.stanford.edu/software/stanford-corenlp-4.2.0.zip"
+    unzip stanford-corenlp-4.2.0.zip
   CUD
 
   config.vm.provision "system-specific", type: "shell", privileged: false, inline: <<-SS
@@ -197,8 +199,6 @@ ENVSH
       drum) packages="libset-scalar-perl $ekb_packages" geonames=y; enju=y;;
       musica) ;;
       cwmsreader)
-        TRIPS_EXE=trips-cwms
-	TRIPS_ARGS='-nouser -reader'
         packages="python python-pip virtualenv aspell-en $ekb_packages"
 	geonames=y
 	node=y
@@ -280,13 +280,13 @@ LIGHTTPDCONF
     . /trips/env.sh
     # main build
     cd $TRIPS_BASE/src/
-    ./configure --with-lisp=sbcl
+    ./configure --with-lisp=sbcl --with-corenlp=/usr/local/share/stanford-corenlp/stanford-corenlp-4.2.0/
     make
     make install
     cd WebParser/
     make -f Makefile-component install
     # make sure the cgi script for the chosen system is really installed (step
-    # and cwmsreader break the pattern):
+    # breaks the pattern):
     ./install-cgi.pl $TRIPS_BASE/www/cgi $TRIPS_SYSTEM
     # also add an index page:
     cat >$TRIPS_BASE/www/index.html <<-INDEX
