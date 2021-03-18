@@ -617,7 +617,7 @@
 	   </li>
 	  </xsl:if>
 	  <li title="Splits sentences into clauses at certain punctuation (e.g. commas), as long as the clauses end up long enough, and they agree with other sources of clause tags if enabled."><label><input type="checkbox" /> clauses</label></li>
-	  <xsl:if test="@system = 'WEB-TOOLS' or @system = 'CWMS' or @system = 'STEP'">
+	  <xsl:if test="@system = 'WEB-TOOLS' or @system = 'STEP'">
 	   <li title="Looks up country names and related terms from mledoze/countries' countries.json file."><label><input type="checkbox" /> countries</label></li>
 	  </xsl:if>
 	  <xsl:if test="@system = 'WEB-TOOLS' or @system = 'DRUM' or @system = 'BOB'">
@@ -631,7 +631,7 @@
 	   </li>
 	  </xsl:if>
 	  <li title="Accepts native tags in the :input-tags argument and integrates them into TextTagger's output as if they originated within TextTagger."><label><input type="checkbox" /> input</label></li>
-	  <xsl:if test="@system != 'DRUM' and @system != 'STEP' and @system != 'MUSICA'">
+	  <xsl:if test="@system != 'DRUM' and @system != 'STEP' and @system != 'MUSICA' and @service != 'CWMSREADER'">
 	   <li title="Uses GNU Aspell to correct misspellings. Sometimes aspell will split words; in that case this tagger also outputs subword tags. We use the Specialist lexicon for the spelling dictionary."><label><input type="checkbox" /> misspellings</label></li>
 	  </xsl:if>
 	  <xsl:if test="@system = 'WEB-TOOLS' or @system = 'MUSICA'">
@@ -655,7 +655,7 @@
 	  <xsl:if test="@system = 'WEB-TOOLS' or @system = 'DRUM' or @system = 'BOB'">
 	   <li title="Adds information from the SPECIALIST lexicon, including part of speech, citation form, complement patterns, and derivational links."><label><input type="checkbox" /> specialist</label></li>
 	  </xsl:if>
-	  <xsl:if test="@system != 'MUSICA'">
+	  <xsl:if test="@system != 'CABOT' and @system != 'COGENT' and @system != 'MUSICA'">
 	   <li title="Uses Stanford CoreNLP to process the string (or each sentence tag if they're available), using the tokenizer to produce word and punctuation tags, the sentence splitter to produce sentence tags (unless they were already in the input), the POS tagger to produce pos tags, the parser to produce clause and phrase tags, and the NER to produce named-entity tags."><label><input type="checkbox" /> stanford_core_nlp</label> (all)
 	    <ul class="checkboxes">
 	     <li><label><input type="checkbox" /> clause</label></li>
@@ -669,7 +669,7 @@
 	   </li>
 	  </xsl:if>
 	  <li title="Uses the Geo::StreetAddress::US Perl module to tag anything that could be the first line of a US address (e.g. &quot;40 S. Alcaniz St.&quot;)."><label><input type="checkbox" /> street_addresses</label></li>
-	  <xsl:if test="@system = 'WEB-TOOLS' or @system = 'DRUM' or @system = 'STEP' or @system = 'CWMS'">
+	  <xsl:if test="@system = 'WEB-TOOLS' or @system = 'STEP'">
 	   <li title="Tags any substring that matches a name in the GNIS database as a named-entity with type ONT::geographic-region."><label><input type="checkbox" /> terms</label> (US geographic names)</li>
 	  </xsl:if>
 	  <li title="Tags anything matching the :lex (or :text) argument of any of the tags from the :input-terms list with a copy of the matching tag(s)."><label><input type="checkbox" /> terms_input</label></li>
