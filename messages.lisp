@@ -107,7 +107,7 @@
       (declare (ignore request-method))
     (let* ((slash-pos (position #\/ request-uri :from-end t))
            (uri-basename (if slash-pos (subseq request-uri (1+ slash-pos)) request-uri))
-	   (make-paragraph-p (or (member trips::*trips-system* '(:drum :step))
+	   (make-paragraph-p (or (member trips::*trips-system* '(:drum :step :propolis))
 				 (string= uri-basename "cwmsreader")))
 	   (do-inference (member uri-basename '("drum-er" "cwmsreader") :test #'string=)))
       (when (string= uri-basename "domiknows")

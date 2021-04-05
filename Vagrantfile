@@ -43,7 +43,7 @@
 
 
 # find out which system we're using
-TRIPS_SYSTEMS = %w{step cogent cabot bob drum musica cwmsreader}
+TRIPS_SYSTEMS = %w{step cogent cabot bob drum musica cwmsreader propolis}
 $trips_system = nil
 if (File.exist?('TRIPS_SYSTEM')) # from this file saved by a previous run
   $trips_system = File.open('TRIPS_SYSTEM','r').readline.strip
@@ -207,6 +207,7 @@ ENVSH
 	mv $TRIPS_BASE/src/PDFExtractor $TRIPS_BASE/src/PDFExtractor.disabled
 	mv $TRIPS_BASE/src/DocumentRepo $TRIPS_BASE/src/DocumentRepo.disabled
 	;;
+      propolis) packages="aspell-en $ekb_packages";;
       *) echo "unknown system, no system-specific deps installed (you're on your own)" ;;
     esac
     echo "export TRIPS_EXE='$TRIPS_EXE'" >>/trips/env.sh

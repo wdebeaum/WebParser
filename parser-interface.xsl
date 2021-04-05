@@ -567,12 +567,12 @@
      <p class="error">Error: <xsl:value-of select="@error" /></p>
     </xsl:if>
     <form action="#">
-     <xsl:if test="@system = 'STEP' or @service = 'CWMSREADER'">
+     <xsl:if test="@system = 'STEP' or @system = 'PROPOLIS' or @service = 'CWMSREADER'">
       <xsl:attribute name="method">POST</xsl:attribute>
      </xsl:if>
      <div>
       <xsl:choose>
-       <xsl:when test="@system = 'STEP' or @service = 'CWMSREADER'">
+       <xsl:when test="@system = 'STEP' or @system = 'PROPOLIS' or @service = 'CWMSREADER'">
         <textarea name="input" placeholder="Enter a paragraph." cols="80" rows="20" maxlength="5000"><xsl:value-of select="@input" /></textarea><br />
        </xsl:when>
        <xsl:otherwise>
@@ -599,7 +599,7 @@
 	 <ul class="checkboxes" id="tag-type-checkboxes">
 	  <li title="Splits common affixes (just prefixes for now) from words."><label><input type="checkbox" /> affixes</label></li>
 	  <li title="Marks sequences of capital letters, numbers, and hyphens as named entities with the type ONT::referential-sem."><label><input type="checkbox" /> alphanumerics</label></li>
-	  <xsl:if test="@system = 'DRUM' or @system = 'STEP' or @system = 'BOB' or @system = 'WEB-TOOLS'">
+	  <xsl:if test="@system = 'DRUM' or @system = 'STEP' or @system = 'BOB' or @system = 'PROPOLIS' or @system = 'WEB-TOOLS'">
 	   <li title="Looks up alternate spellings for certain words from a table (mostly US/British differences)."><label><input type="checkbox" /> alternate_spellings</label></li>
 	  </xsl:if>
 	  <xsl:if test="@system = 'WEB-TOOLS'">
@@ -637,7 +637,7 @@
 	  <xsl:if test="@system = 'WEB-TOOLS' or @system = 'MUSICA'">
 	   <li title="Tags music-related terms and abbreviations, such as pitches, intervals, and chords."><label><input type="checkbox" /> music</label></li>
 	  </xsl:if>
-	  <xsl:if test="@system = 'DRUM' or @system = 'STEP'">
+	  <xsl:if test="@system = 'DRUM' or @system = 'STEP' or @system = 'PROPOLIS'">
 	   <li title="Tags nonempty lines as sentences."><label><input type="checkbox" /> one_sentence_per_line</label></li>
 	  </xsl:if>
 	  <xsl:if test="@system = 'WEB-TOOLS' or @system = 'STEP'">
@@ -745,7 +745,7 @@
 	   (note that . , ; `` '' are omitted for technical reasons, but they don't usually have sense tags in the first place)
 	  </li>
 	 </ul>
-        <xsl:if test="@system = 'STEP' or @system = 'DRUM' or @service = 'CWMSREADER'">
+        <xsl:if test="@system = 'STEP' or @system = 'DRUM' or @system = 'PROPOLIS' or @service = 'CWMSREADER'">
 	 <label title="Select how finely TextTagger splits the paragraph into utterances; 'split sentences' only splits on sentence breaks, while 'split clauses' additionally splits on commas and certain other punctuation if the resulting clauses are long enough. Note that the Parser may further split the utterances it gets from TextTagger into smaller fragments, regardless of this setting.">Split mode: <select name="split-mode" id="split-mode">
 	  <option value="split-clauses">
 	   <xsl:if test="@split-mode = 'split-clauses'">

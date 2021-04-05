@@ -274,12 +274,12 @@
     (when (paragraph-texttagger-options para)
       (set-texttagger-options *original-tt-parameters*))
     (unless (eq :split-clauses (paragraph-split-mode para))
-      (send-msg '(request :receiver reader :content
+      (send-msg `(request :receiver reader :content
 	  ;; FIXME DrumGUI doesn't let us ask it what the tag options were to
 	  ;; begin with, so we have to just assume the default tag options (at
 	  ;; time of writing these were the defaults in the only systems that
-	  ;; use DrumGUI, drum and cwmsreader)
-          (set-tag-options :split-clauses t :split-sentences t))))
+	  ;; use DrumGUI, drum, cwmsreader, and propolis)
+          (set-tag-options :split-clauses ,(not (eq :propolis trips::*trips-system*)) :split-sentences t))))
     )
   )
 
@@ -335,7 +335,7 @@
 	(etypecase text
 	  (utterance (send-utterance-to-system text))
 	  (paragraph
-	    (if (or (eq :drum trips::*trips-system*)
+	    (if (or (member trips::*trips-system* '(:drum :propolis))
 		    (eq :cwmsreader (text-unit-service text)))
 	      (send-paragraph-to-drum-system text)
 	      (send-paragraph-to-system text)
