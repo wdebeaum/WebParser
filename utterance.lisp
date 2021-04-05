@@ -238,6 +238,7 @@
         (send-msg '(request :receiver reader :content
 	    (set-tag-options :split-clauses nil :split-sentences t))))
       ;; ditto parser/extraction options
+      ; FIXME? setting parser options with DrumGUI is questionable now: number-parses-desired!=1 doesn't work with DrumGUI, and SkeletonScore no longer works at all
       (set-parser-options (paragraph-parser-options para))
       (set-extraction-options (paragraph-extraction-options para))
       (let* ((do-inference (find-arg (paragraph-extraction-options para) :do-inference))
@@ -314,6 +315,11 @@
     )
   )
 
+(defun use-drumgui-p (text)
+    (declare (type text-unit text))
+  (or (member trips::*trips-system* '(:drum :propolis))
+      (eq :cwmsreader (text-unit-service text))))
+
 (defun send-text-to-system (text)
     (declare (type text-unit text))
   (incf *last-uttnum*)
@@ -335,8 +341,7 @@
 	(etypecase text
 	  (utterance (send-utterance-to-system text))
 	  (paragraph
-	    (if (or (member trips::*trips-system* '(:drum :propolis))
-		    (eq :cwmsreader (text-unit-service text)))
+	    (if (use-drumgui-p text)
 	      (send-paragraph-to-drum-system text)
 	      (send-paragraph-to-system text)
 	      ))
@@ -365,8 +370,9 @@
 	       (assoc '(parser::number-parses-desired parser::*chart*) po
 		      :test #'equalp)
 	       ;; wasn't explicitly supplied; still tell client what the
-	       ;; default is, so that the hyp selector works
-	       (progn
+	       ;; default is, so that the hyp selector works (when not using
+	       ;; DrumGUI, which can't handle multiple hyps)
+	       (unless (use-drumgui-p text)
 		 (init-original-parser-options)
 		 (assoc '(parser::number-parses-desired parser::*chart*)
 			*original-parser-options*
@@ -402,7 +408,8 @@
       ,@(when sss-pair
 	(list :semantic-skeleton-scoring
 	      (when (second sss-pair) (format nil "~a" (second sss-pair)))))
-      :number-parses-desired ,npd
+      ,@(when npd
+        (list :number-parses-desired npd))
       ,@(when rs (list :rule-set rs))
       ,@(when tl (list :trace-level (format nil "~s" tl)))
       ,@(when (eq 'parser (text-unit-component text))
