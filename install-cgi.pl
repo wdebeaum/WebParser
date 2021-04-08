@@ -20,7 +20,7 @@ my %tiu_addresses = qw(
   lex-ont	127.0.0.1:6243
   bob		127.0.0.1:6205
   cogent	127.0.0.1:6206
-  musica	127.0.0.1:6207
+  propolis	127.0.0.1:6207
   cwms		127.0.0.1:6208
   cwmsreader	127.0.0.1:6209
   drum-dev	127.0.0.1:6241
