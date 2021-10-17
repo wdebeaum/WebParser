@@ -109,7 +109,7 @@
            (uri-basename (if slash-pos (subseq request-uri (1+ slash-pos)) request-uri))
 	   (make-paragraph-p (or (member trips::*trips-system* '(:drum :step :propolis))
 				 (string= uri-basename "cwmsreader")))
-	   (do-inference (member uri-basename '("drum-er" "cwmsreader") :test #'string=)))
+	   (do-inference (member uri-basename '("drum-er" "cwmsreader" "propolis") :test #'string=)))
       (when (string= uri-basename "domiknows")
 	(return-from handle-http-request nil)) ; let Domiknows component do it
       (when (string= uri-basename "lex-ont")
@@ -124,7 +124,8 @@
 ;	(error "bogus request uri: ~s" request-uri))
       (destructuring-bind ( &key input
       			    (component "parser")
-			    (extscontents (if (string= uri-basename "cwmsreader") "inf" "raw"))
+			    (extscontents (if (or (member trips::*trips-system* '(:propolis))
+						  (string= uri-basename "cwmsreader")) "inf" "raw"))
 			    (extsformat "svg")
 			    tagsformat
 			    (treecontents "phrase")
