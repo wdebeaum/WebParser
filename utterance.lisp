@@ -264,7 +264,19 @@
 		      (list (remove-processing-instructions
 			        (slurp-file inf-ekb-file)))
 		      ))))
-	(setf *last-uttnum* (car (last (paragraph-uttnums para))))
+	(cond
+	  ((paragraph-uttnums para)
+	    ;; got some uttnums; remember the last one so we don't repeat them
+	    (setf *last-uttnum* (car (last (paragraph-uttnums para)))))
+	  (t
+	    ;; reader didn't like this input, and so didn't bother to send
+	    ;; anything to TextTagger and get uttnums; finish immediately
+	    (finish-text-unit-with-error
+	      para
+	      (make-condition 'simple-error :format-control
+		"Reader component refused to process this input.")
+	      ))
+	  )
 	)
       )
     ;; cleanup forms
