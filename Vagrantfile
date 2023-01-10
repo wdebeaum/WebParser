@@ -18,7 +18,7 @@
 # set it up (this will take several minutes or hours, depending on the system),
 # and run it.
 # - In your web browser, go to:
-#   http://192.168.146.27/
+#   http://192.168.56.27/
 #
 # More commands:
 # - To ssh into the VM trips is running in:
@@ -71,7 +71,7 @@ Vagrant.configure(2) do |config|
   # doesn't work?
   #config.vm.network "forwarded_port", guest: 80, host: 32502
 
-  config.vm.network "private_network", ip: "192.168.146.27"
+  config.vm.network "private_network", ip: "192.168.56.27"
   config.vm.provider "virtualbox" do |vb|
     # Customize the amount of memory on the VM:
     vb.memory = "4096"
@@ -102,6 +102,12 @@ Vagrant.configure(2) do |config|
     HOME
   end
 
+  config.vm.provision "locales", type: "shell", inline: <<-LOCALES
+    set -eux
+    echo "en_US.UTF-8 UTF-8" >/etc/locale.gen
+    locale-gen
+  LOCALES
+
   config.vm.provision "environment", type: "shell", privileged: false, inline: <<-ENVIRONMENT
     set -eux
     if [ ! -e /trips/env.sh ] ; then
@@ -130,7 +136,7 @@ ENVSH
       make \
       curl \
       unzip \
-      gcc-8 \
+      g++-8 \
       libicu-dev \
       pkg-config \
       sbcl \
@@ -144,6 +150,8 @@ ENVSH
       libcgi-pm-perl \
       graphviz \
       screen
+    # make sure g++ is actually accessible as g++ and not just g++-8
+    if ! which g++ ; then ln -s g++-8 /usr/bin/g++ ; fi
   CPD
 
   config.vm.provision "common-unpackaged-deps", type: "shell", privileged: false, inline: <<-CUD
@@ -264,7 +272,7 @@ ENVSH
 	server.modules=("mod_cgi")
 	\\$HTTP["url"] =~ "^/cgi" { cgi.assign = ( "" => "" ) }
 	server.document-root="$TRIPS_BASE/www"
-	server.bind="192.168.146.27"
+	server.bind="192.168.56.27"
 	mimetype.assign = (
 	  ".html" => "text/html",
 	  ".css" => "text/css",
